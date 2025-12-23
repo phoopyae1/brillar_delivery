@@ -1,21 +1,22 @@
 const jwt = require('jsonwebtoken');
+const { AppError } = require('./errorHandler');
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = (req, _res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ message: 'Missing authorization header' });
+  if (!authHeader) throw new AppError(401, 'Missing authorization header');
   const token = authHeader.split(' ')[1];
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.user = payload;
     next();
   } catch (err) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    throw new AppError(401, 'Invalid or expired token');
   }
 };
 
-const requireRoles = (...roles) => (req, res, next) => {
+const requireRoles = (...roles) => (req, _res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
-    return res.status(403).json({ message: 'Forbidden' });
+    throw new AppError(403, 'Forbidden');
   }
   next();
 };

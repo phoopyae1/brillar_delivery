@@ -1,6 +1,8 @@
 require('dotenv').config({ path: '../.env' });
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { generateTrackingCode } = require('../src/utils/trackingCode');
+
 const prisma = new PrismaClient();
 
 const users = [
@@ -12,7 +14,7 @@ const users = [
   { name: 'Curt Courier', email: 'courier2@example.com', role: 'COURIER' }
 ];
 
-const statuses = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+const statusOrder = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 async function main() {
   await prisma.deliveryEvent.deleteMany();
@@ -23,9 +25,7 @@ async function main() {
   const password = await bcrypt.hash('password123', 10);
   const createdUsers = {};
   for (const user of users) {
-    createdUsers[user.email] = await prisma.user.create({
-      data: { ...user, password }
-    });
+    createdUsers[user.email] = await prisma.user.create({ data: { ...user, password } });
   }
 
   const sender = createdUsers['sender@example.com'];
@@ -34,8 +34,8 @@ async function main() {
   const courier2 = createdUsers['courier2@example.com'];
 
   for (let i = 1; i <= 10; i++) {
-    const trackingCode = `TRK-SEED-${i}`;
-    const status = statuses[i % statuses.length];
+    const trackingCode = generateTrackingCode();
+    const status = statusOrder[i % statusOrder.length];
     const delivery = await prisma.delivery.create({
       data: {
         trackingCode,
@@ -53,14 +53,7 @@ async function main() {
     const assignmentCourier = i % 2 === 0 ? courier2 : courier;
     await prisma.assignment.create({ data: { deliveryId: delivery.id, courierId: assignmentCourier.id } });
 
-    const baseEvents = [
-      { type: 'CREATED', note: 'Created by sender', userId: sender.id },
-      { type: 'ASSIGNED', note: 'Assigned to courier', userId: dispatcher.id }
-    ];
-
-    const statusOrder = ['CREATED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED'];
-    const statusIndex = statusOrder.indexOf(status);
-    for (let s = 0; s <= statusIndex; s++) {
+    for (let s = 0; s <= statusOrder.indexOf(status); s++) {
       const type = statusOrder[s];
       await prisma.deliveryEvent.create({
         data: {
@@ -72,6 +65,15 @@ async function main() {
         }
       });
     }
+
+    await prisma.deliveryEvent.create({
+      data: {
+        deliveryId: delivery.id,
+        type: 'ASSIGNED',
+        note: 'Assigned to courier',
+        createdById: dispatcher.id
+      }
+    });
   }
 
   console.log('Seed complete');

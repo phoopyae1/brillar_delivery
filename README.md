@@ -3,7 +3,7 @@
 Full-stack demo for office package delivery workflows with sender, dispatcher, courier, and admin roles.
 
 ## Tech Stack
-- **Frontend:** Next.js (App Router), TypeScript, MUI
+- **Frontend:** Next.js (App Router), TypeScript, MUI, SWR polling
 - **Backend:** Node.js, Express (CommonJS), JWT auth, Zod validation
 - **Database:** PostgreSQL with Prisma ORM
 - **Workspace:** npm workspaces with `apps/api` and `apps/web`
@@ -13,7 +13,6 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
    ```bash
    npm install
    ```
-   > If your environment blocks registry access, install manually per app using the dependencies in each `package.json`.
 
 2. **Run Postgres via Docker Compose:**
    ```bash
@@ -55,30 +54,56 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
   - courier@example.com (COURIER)
   - courier2@example.com (COURIER)
   - admin@example.com (ADMIN)
-- Deliveries: 10 sample records with tracking codes `TRK-SEED-1..10` and historical events.
+- Deliveries: 10 sample records with auto-generated tracking codes and events following the status flow.
 
-## API Overview
+## API Highlights
 Base URL defaults to `http://localhost:4000`.
-- `POST /auth/register`, `POST /auth/login` — JWT auth
-- `POST /deliveries` — sender/create
-- `GET /deliveries/:trackingCode/public` — public tracking
-- `GET /deliveries/:id`, `GET /me/deliveries`
+- `POST /auth/register`, `POST /auth/login` — JWT auth with bcrypt
+- `POST /deliveries` — sender/admin create (tracking code like `OFF-2025-XXXXXX`)
+- `GET /deliveries/:trackingCode/public` — public tracking (safe fields + timeline)
+- `GET /deliveries/:id`, `GET /me/deliveries` — role-aware access
 - `PATCH /deliveries/:id/assign` — dispatcher/admin
-- `PATCH /deliveries/:id/status` — courier/dispatcher/admin/sender (state machine enforced)
-- `POST /deliveries/:id/events` — add checkpoint note
+- `PATCH /deliveries/:id/status` — state machine enforced per role
+- `POST /deliveries/:id/events` — add checkpoint notes/locations
 - `GET /deliveries` & `GET /stats` — admin/dispatcher dashboards
 
-State machine: `DRAFT -> CREATED -> ASSIGNED -> PICKED_UP -> IN_TRANSIT -> OUT_FOR_DELIVERY -> DELIVERED` with alternate `CANCELLED`, `FAILED_DELIVERY`, `RETURNED`. Sender cancel allowed before pickup.
+### Example cURL calls
+```bash
+# Login
+curl -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"sender@example.com","password":"password123"}'
+
+# Create delivery
+curl -X POST http://localhost:4000/deliveries \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"title":"Docs","description":"Binder","priority":"HIGH","receiverName":"Alex","receiverPhone":"555-0100","destinationAddress":"500 Market St"}'
+
+# Dispatcher assign
+curl -X PATCH http://localhost:4000/deliveries/1/assign \
+  -H "Authorization: Bearer $DISPATCHER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"courierId":3}'
+
+# Courier status update
+curl -X PATCH http://localhost:4000/deliveries/1/status \
+  -H "Authorization: Bearer $COURIER_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"status":"OUT_FOR_DELIVERY","note":"Left hub","locationText":"HQ"}'
+
+# Public tracking
+curl http://localhost:4000/deliveries/OFF-2025-XXXXXX/public
+```
 
 ## Frontend Pages
 - `/` landing
 - `/login`, `/register`
-- `/dashboard` role-aware controls (sender create, dispatcher assign, courier status updates, admin analytics)
-- `/track/[trackingCode]` public tracker with stepper timeline
-- `/track/quick` quick lookup form
+- `/dashboard/sender` create + list my deliveries
+- `/dashboard/dispatcher` unassigned deliveries + assign courier
+- `/dashboard/courier` my assignments + update status/add checkpoint
+- `/admin` all deliveries/users (DataGrid) + counts
+- `/track/[trackingCode]` public tracker with MUI Stepper and 5s polling
 
-## Real-time Updates
-Polling every 5 seconds on dashboards and public tracking pages keeps statuses fresh.
+### Auth token storage
+For the demo, JWT tokens and user profiles are stored in `localStorage` and reused by client-side fetchers. Log out clears the storage. In production, prefer HTTP-only cookies or secure storage to mitigate XSS.
 
 ## Detailed Design
 See `docs/design.md` for the state machine, Prisma schema, REST API specification, security rules, and demo test/seed scenarios.

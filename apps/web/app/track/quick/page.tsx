@@ -1,20 +1,21 @@
 'use client';
 import { useState } from 'react';
-import { Container, TextField, Button, Stack, Typography, Paper } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { Button, Container, Paper, Stack, TextField, Typography } from '@mui/material';
 
-export default function QuickTrack() {
-  const [code, setCode] = useState('TRK-SEED-1');
+export default function QuickTrackPage() {
   const router = useRouter();
+  const [code, setCode] = useState('');
+
   return (
-    <Container maxWidth="sm" sx={{ mt: 6 }}>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
       <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Track a Delivery
+        <Typography variant="h5" gutterBottom>
+          Track a package
         </Typography>
-        <Stack spacing={2}>
-          <TextField label="Tracking Code" value={code} onChange={(e) => setCode(e.target.value)} />
-          <Button variant="contained" onClick={() => router.push(`/track/${code}`)}>
+        <Stack spacing={2} sx={{ mt: 2 }}>
+          <TextField label="Tracking code" value={code} onChange={(e) => setCode(e.target.value)} />
+          <Button variant="contained" onClick={() => router.push(`/track/${code}`)} disabled={!code}>
             Track
           </Button>
         </Stack>

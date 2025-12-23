@@ -37,15 +37,15 @@ enum Priority {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
+  id         Int              @id @default(autoincrement())
   name       String
-  email      String   @unique
+  email      String           @unique
   password   String
   role       Role
-  deliveries Delivery[] @relation("SenderDeliveries")
-  assignments Assignment[] @relation("CourierAssignments")
-  events     DeliveryEvent[] @relation("UserEvents")
-  createdAt  DateTime @default(now())
+  deliveries Delivery[]       @relation("SenderDeliveries")
+  assignments Assignment[]    @relation("CourierAssignments")
+  events     DeliveryEvent[]  @relation("UserEvents")
+  createdAt  DateTime         @default(now())
 }
 
 model Delivery {
@@ -54,7 +54,7 @@ model Delivery {
   title              String
   description        String
   priority           Priority        @default(MEDIUM)
-  status             DeliveryStatus  @default(DRAFT)
+  status             DeliveryStatus  @default(CREATED)
   sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
   senderId           Int
   receiverName       String

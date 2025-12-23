@@ -2,6 +2,8 @@ import './globals.css';
 import { ReactNode } from 'react';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import TopNav from './components/TopNav';
+import { SWRConfig } from 'swr';
 
 const theme = createTheme({
   palette: {
@@ -22,7 +24,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <CssBaseline />
-            {children}
+            <SWRConfig value={{ refreshInterval: 5000 }}>
+              <TopNav />
+              {children}
+            </SWRConfig>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>

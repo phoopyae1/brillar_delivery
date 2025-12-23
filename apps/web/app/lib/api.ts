@@ -1,75 +1,65 @@
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN';
+};
+
+export type Delivery = {
+  id: number;
+  trackingCode: string;
+  title: string;
+  description: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: string;
+  senderId: number;
+  receiverName: string;
+  receiverPhone: string;
+  destinationAddress: string;
+  createdAt: string;
+};
+
+export type DeliveryEvent = {
+  id: number;
+  type: string;
+  note?: string | null;
+  locationText?: string | null;
+  createdAt: string;
+  createdBy?: { name: string; role: string };
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-async function request(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
-    cache: 'no-store'
-  });
+async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>)
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
   if (!res.ok) {
-    let message = 'Request failed';
-    try {
-      const body = await res.json();
-      message = body.message || JSON.stringify(body);
-    } catch (e) {}
-    throw new Error(message);
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(error.message || 'Request failed');
   }
   return res.json();
 }
 
-export function authHeaders(token?: string) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+export const authApi = {
+  login: (data: { email: string; password: string }) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  register: (data: { name: string; email: string; password: string; role: User['role'] }) =>
+    apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) })
+};
 
-export async function login(email: string, password: string) {
-  return request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-}
-
-export async function register(data: { name: string; email: string; password: string; role: string }) {
-  return request('/auth/register', { method: 'POST', body: JSON.stringify(data) });
-}
-
-export async function createDelivery(token: string, payload: any) {
-  return request('/deliveries', { method: 'POST', headers: authHeaders(token), body: JSON.stringify(payload) });
-}
-
-export async function getMyDeliveries(token: string) {
-  return request('/me/deliveries', { headers: authHeaders(token) });
-}
-
-export async function assignDelivery(token: string, id: number, courierId: number) {
-  return request(`/deliveries/${id}/assign`, {
-    method: 'PATCH',
-    headers: authHeaders(token),
-    body: JSON.stringify({ courierId })
-  });
-}
-
-export async function updateStatus(token: string, id: number, status: string, note?: string, locationText?: string) {
-  return request(`/deliveries/${id}/status`, {
-    method: 'PATCH',
-    headers: authHeaders(token),
-    body: JSON.stringify({ status, note, locationText })
-  });
-}
-
-export async function addEvent(token: string, id: number, payload: any) {
-  return request(`/deliveries/${id}/events`, { method: 'POST', headers: authHeaders(token), body: JSON.stringify(payload) });
-}
-
-export async function getPublicTracking(trackingCode: string) {
-  return request(`/deliveries/${trackingCode}/public`, { cache: 'no-store' });
-}
-
-export async function getAdminData(token: string) {
-  const [stats, deliveries] = await Promise.all([
-    request('/stats', { headers: authHeaders(token) }),
-    request('/deliveries', { headers: authHeaders(token) })
-  ]);
-  return { stats, deliveries };
-}
-
-export { API_URL };
+export const deliveryApi = {
+  create: (token: string, data: Partial<Delivery>) => apiFetch('/deliveries', { method: 'POST', body: JSON.stringify(data) }, token),
+  mine: (token: string) => apiFetch('/me/deliveries', { method: 'GET' }, token),
+  adminAll: (token: string) => apiFetch('/deliveries', { method: 'GET' }, token),
+  adminStats: (token: string) => apiFetch('/stats', { method: 'GET' }, token),
+  assign: (token: string, id: number, courierId: number) =>
+    apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
+  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string }) =>
+    apiFetch(`/deliveries/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  addEvent: (token: string, id: number, payload: { type: string; note?: string; locationText?: string }) =>
+    apiFetch(`/deliveries/${id}/events`, { method: 'POST', body: JSON.stringify(payload) }, token),
+  publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`)
+};
