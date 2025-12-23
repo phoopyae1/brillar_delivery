@@ -1,0 +1,10 @@
+{
+  "name": "office-delivery-tracking",
+  "private": true,
+  "workspaces": ["backend", "frontend"],
+  "scripts": {
+    "dev:api": "npm --workspace backend run dev",
+    "dev:web": "npm --workspace frontend run dev",
+    "dev": "npm run dev:api & npm run dev:web"
+  }
+}
