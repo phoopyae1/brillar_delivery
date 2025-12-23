@@ -25,8 +25,8 @@ export default function TopNav() {
       elevation={0}
       sx={{
         backdropFilter: 'blur(12px)',
-        background: 'linear-gradient(120deg, rgba(25, 118, 210, 0.08), rgba(156, 39, 176, 0.06))',
-        borderBottom: '1px solid rgba(15, 23, 42, 0.08)'
+        background: 'linear-gradient(120deg, rgba(15, 15, 15, 0.92), rgba(201, 162, 39, 0.18))',
+        borderBottom: '1px solid rgba(184, 184, 184, 0.24)'
       }}
     >
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', py: 2 }}>
@@ -45,8 +45,18 @@ export default function TopNav() {
                 textTransform: 'none',
                 borderRadius: '999px',
                 px: 2,
+                border: pathname?.startsWith(link.href)
+                  ? '1px solid rgba(201, 162, 39, 0.24)'
+                  : '1px solid rgba(184, 184, 184, 0.25)',
                 bgcolor: pathname?.startsWith(link.href) ? 'primary.main' : 'transparent',
-                color: pathname?.startsWith(link.href) ? 'white' : 'inherit'
+                color: pathname?.startsWith(link.href) ? 'primary.contrastText' : 'text.primary',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: pathname?.startsWith(link.href)
+                    ? 'primary.main'
+                    : 'rgba(201, 162, 39, 0.14)',
+                  color: pathname?.startsWith(link.href) ? 'primary.contrastText' : 'white'
+                }
               }}
             >
               {link.label}
