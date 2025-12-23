@@ -1,14 +1,16 @@
 :root {
-  --background: linear-gradient(135deg, #f9fbff 0%, #eef2ff 50%, #fdf5ff 100%);
-  --surface: rgba(255, 255, 255, 0.82);
-  --border: 1px solid rgba(25, 118, 210, 0.08);
+  --background: radial-gradient(circle at 20% 20%, rgba(201, 162, 39, 0.14), transparent 35%),
+    radial-gradient(circle at 80% 0%, rgba(184, 184, 184, 0.22), transparent 32%),
+    linear-gradient(150deg, #0f0f0f 0%, #151515 40%, #1c1c1c 100%);
+  --surface: rgba(255, 255, 255, 0.04);
+  --border: 1px solid rgba(184, 184, 184, 0.28);
 }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
   background: var(--background);
-  color: #0f172a;
+  color: #ffffff;
 }
 
 * {

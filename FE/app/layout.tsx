@@ -7,8 +7,17 @@ import { SWRConfig } from 'swr';
 
 const theme = createTheme({
   palette: {
-    primary: { main: '#1976d2' },
-    secondary: { main: '#9c27b0' }
+    mode: 'dark',
+    primary: { main: '#C9A227', contrastText: '#0F0F0F' },
+    secondary: { main: '#B8B8B8', contrastText: '#0F0F0F' },
+    background: {
+      default: '#0F0F0F',
+      paper: '#161616'
+    },
+    text: {
+      primary: '#FFFFFF',
+      secondary: '#B8B8B8'
+    }
   }
 });
 
