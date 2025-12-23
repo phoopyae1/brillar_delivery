@@ -1,9 +1,16 @@
 :root {
-  --background: #f7f7f9;
+  --background: linear-gradient(135deg, #f9fbff 0%, #eef2ff 50%, #fdf5ff 100%);
+  --surface: rgba(255, 255, 255, 0.82);
+  --border: 1px solid rgba(25, 118, 210, 0.08);
 }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
   background: var(--background);
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
 }
