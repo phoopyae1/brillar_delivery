@@ -6,7 +6,7 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 - **Frontend:** Next.js (App Router), TypeScript, MUI, SWR polling
 - **Backend:** Node.js, Express (CommonJS), JWT auth, Zod validation
 - **Database:** PostgreSQL with Prisma ORM
-- **Workspace:** npm workspaces with `apps/api` and `apps/web`
+- **Workspace:** npm workspaces with `BE` (API) and `FE` (web)
 
 ## Getting Started
 1. **Install dependencies** (workspace-aware):
@@ -22,13 +22,13 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 3. **Environment variables:**
    - Copy examples to real files:
      ```bash
-     cp apps/api/.env.example apps/api/.env
-     cp apps/web/.env.example apps/web/.env
+     cp BE/.env.example BE/.env
+     cp FE/.env.example FE/.env
      ```
 
 4. **Prisma setup (API):**
    ```bash
-   cd apps/api
+   cd BE
    npx prisma generate
    npx prisma migrate dev --name init
    node prisma/seed.js
@@ -37,13 +37,13 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 5. **Start the API:**
    ```bash
    npm run dev --workspace api
-   # or from apps/api: npm run dev
+   # or from BE: npm run dev
    ```
 
 6. **Start the web app:**
    ```bash
    npm run dev --workspace web
-   # or from apps/web: npm run dev
+   # or from FE: npm run dev
    ```
 
 ## Seed Data
