@@ -79,3 +79,6 @@ State machine: `DRAFT -> CREATED -> ASSIGNED -> PICKED_UP -> IN_TRANSIT -> OUT_F
 
 ## Real-time Updates
 Polling every 5 seconds on dashboards and public tracking pages keeps statuses fresh.
+
+## Detailed Design
+See `docs/design.md` for the state machine, Prisma schema, REST API specification, security rules, and demo test/seed scenarios.
