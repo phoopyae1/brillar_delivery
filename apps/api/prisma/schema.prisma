@@ -1,0 +1,87 @@
+// Prisma schema for office delivery tracking
+// Datasource configured via DATABASE_URL env
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SENDER
+  DISPATCHER
+  COURIER
+  ADMIN
+}
+
+enum DeliveryStatus {
+  DRAFT
+  CREATED
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  FAILED_DELIVERY
+  RETURNED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  password   String
+  role       Role
+  deliveries Delivery[] @relation("SenderDeliveries")
+  assignments Assignment[] @relation("CourierAssignments")
+  events     DeliveryEvent[] @relation("UserEvents")
+  createdAt  DateTime @default(now())
+}
+
+model Delivery {
+  id                 Int             @id @default(autoincrement())
+  trackingCode       String          @unique
+  title              String
+  description        String
+  priority           Priority        @default(MEDIUM)
+  status             DeliveryStatus  @default(DRAFT)
+  sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
+  senderId           Int
+  receiverName       String
+  receiverPhone      String
+  destinationAddress String
+  assignments        Assignment[]
+  events             DeliveryEvent[]
+  createdAt          DateTime        @default(now())
+}
+
+model Assignment {
+  id         Int      @id @default(autoincrement())
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
+  deliveryId Int
+  courier    User     @relation("CourierAssignments", fields: [courierId], references: [id])
+  courierId  Int
+  assignedAt DateTime @default(now())
+}
+
+model DeliveryEvent {
+  id           Int             @id @default(autoincrement())
+  delivery     Delivery        @relation(fields: [deliveryId], references: [id])
+  deliveryId   Int
+  type         DeliveryStatus
+  note         String?
+  locationText String?
+  createdBy    User            @relation("UserEvents", fields: [createdById], references: [id])
+  createdById  Int
+  createdAt    DateTime        @default(now())
+}
