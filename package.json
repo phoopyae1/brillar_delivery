@@ -1,10 +1,10 @@
 {
   "name": "office-delivery-tracking",
   "private": true,
-  "workspaces": ["apps/api", "apps/web"],
+  "workspaces": ["backend", "frontend"],
   "scripts": {
-    "dev:api": "npm --workspace apps/api run dev",
-    "dev:web": "npm --workspace apps/web run dev",
+    "dev:api": "npm --workspace backend run dev",
+    "dev:web": "npm --workspace frontend run dev",
     "dev": "npm run dev:api & npm run dev:web"
   }
 }

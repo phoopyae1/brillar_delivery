@@ -6,7 +6,8 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 - **Frontend:** Next.js (App Router), TypeScript, MUI, SWR polling
 - **Backend:** Node.js, Express (CommonJS), JWT auth, Zod validation
 - **Database:** PostgreSQL with Prisma ORM
-- **Workspace:** npm workspaces with `apps/api` and `apps/web`
+- **Workspace:** npm workspaces with `backend` (API) and `frontend` (web)
+- **Status flow:** CREATED → ASSIGNED_FOR_PICKUP → PICKED_UP → ARRIVED_AT_HUB → DEPARTED_HUB → OUT_FOR_DELIVERY → DELIVERED/DELIVERY_FAILED
 
 ## Getting Started
 1. **Install dependencies** (workspace-aware):
@@ -22,13 +23,13 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 3. **Environment variables:**
    - Copy examples to real files:
      ```bash
-     cp apps/api/.env.example apps/api/.env
-     cp apps/web/.env.example apps/web/.env
+    cp backend/.env.example backend/.env
+    cp frontend/.env.example frontend/.env
      ```
 
 4. **Prisma setup (API):**
    ```bash
-   cd apps/api
+  cd backend
    npx prisma generate
    npx prisma migrate dev --name init
    node prisma/seed.js
@@ -36,14 +37,14 @@ Full-stack demo for office package delivery workflows with sender, dispatcher, c
 
 5. **Start the API:**
    ```bash
-   npm run dev --workspace api
-   # or from apps/api: npm run dev
+  npm run dev --workspace backend
+  # or from backend: npm run dev
    ```
 
 6. **Start the web app:**
    ```bash
-   npm run dev --workspace web
-   # or from apps/web: npm run dev
+  npm run dev --workspace frontend
+  # or from frontend: npm run dev
    ```
 
 ## Seed Data
@@ -77,7 +78,7 @@ curl -X POST http://localhost:4000/auth/login \
 # Create delivery
 curl -X POST http://localhost:4000/deliveries \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"title":"Docs","description":"Binder","priority":"HIGH","receiverName":"Alex","receiverPhone":"555-0100","destinationAddress":"500 Market St"}'
+  -d '{"title":"Docs","description":"Binder","priority":"HIGH","receiverName":"Alex","receiverPhone":"555-0100","pickupAddress":"10 Front St","deliveryAddress":"500 Market St"}'
 
 # Dispatcher assign
 curl -X PATCH http://localhost:4000/deliveries/1/assign \

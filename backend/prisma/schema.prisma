@@ -1,0 +1,119 @@
+// Prisma schema for office delivery tracking
+// Datasource configured via DATABASE_URL env
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SENDER
+  DISPATCHER
+  COURIER
+  ADMIN
+}
+
+enum DeliveryStatus {
+  CREATED
+  ASSIGNED_FOR_PICKUP
+  PICKED_UP
+  ARRIVED_AT_HUB
+  DEPARTED_HUB
+  OUT_FOR_DELIVERY
+  DELIVERED
+  DELIVERY_FAILED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id         Int              @id @default(autoincrement())
+  name       String
+  email      String           @unique
+  password   String
+  role       Role
+  deliveries Delivery[]       @relation("SenderDeliveries")
+  assignments Assignment[]    @relation("CourierAssignments")
+  events     DeliveryEvent[]  @relation("UserEvents")
+  createdAt  DateTime         @default(now())
+}
+
+model Delivery {
+  id                 Int             @id @default(autoincrement())
+  trackingCode       String          @unique
+  title              String
+  description        String
+  priority           Priority        @default(MEDIUM)
+  status             DeliveryStatus  @default(CREATED)
+  sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
+  senderId           Int
+  receiverName       String
+  receiverPhone      String
+  pickupAddress      String
+  deliveryAddress    String
+  packageWeight      Float?
+  packageDimensions  String?
+  serviceType        String?
+  proofSignatureUrl  String?
+  proofPhotoUrl      String?
+  proofCapturedAt    DateTime?
+  failureReason      String?
+  assignments        Assignment[]
+  events             DeliveryEvent[]
+  tickets            SupportTicket[]
+  createdAt          DateTime        @default(now())
+}
+
+model Assignment {
+  id         Int      @id @default(autoincrement())
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
+  deliveryId Int
+  courier    User     @relation("CourierAssignments", fields: [courierId], references: [id])
+  courierId  Int
+  assignedAt DateTime @default(now())
+}
+
+model DeliveryEvent {
+  id           Int             @id @default(autoincrement())
+  delivery     Delivery        @relation(fields: [deliveryId], references: [id])
+  deliveryId   Int
+  type         DeliveryStatus
+  note         String?
+  locationText String?
+  createdBy    User            @relation("UserEvents", fields: [createdById], references: [id])
+  createdById  Int
+  createdAt    DateTime        @default(now())
+}
+
+enum TicketCategory {
+  DELAY
+  DAMAGE
+  MISSING
+  OTHER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+model SupportTicket {
+  id           Int           @id @default(autoincrement())
+  delivery     Delivery      @relation(fields: [deliveryId], references: [id])
+  deliveryId   Int
+  category     TicketCategory
+  description  String
+  status       TicketStatus  @default(OPEN)
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  createdById  Int
+  createdAt    DateTime      @default(now())
+}

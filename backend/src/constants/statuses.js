@@ -1,0 +1,37 @@
+const STATUS_FLOW = [
+  'CREATED',
+  'ASSIGNED_FOR_PICKUP',
+  'PICKED_UP',
+  'ARRIVED_AT_HUB',
+  'DEPARTED_HUB',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+  'DELIVERY_FAILED'
+];
+
+const ALLOWED_TRANSITIONS = {
+  CREATED: ['ASSIGNED_FOR_PICKUP'],
+  ASSIGNED_FOR_PICKUP: ['PICKED_UP'],
+  PICKED_UP: ['ARRIVED_AT_HUB', 'OUT_FOR_DELIVERY'],
+  ARRIVED_AT_HUB: ['DEPARTED_HUB'],
+  DEPARTED_HUB: ['OUT_FOR_DELIVERY'],
+  OUT_FOR_DELIVERY: ['DELIVERED', 'DELIVERY_FAILED'],
+  DELIVERED: [],
+  DELIVERY_FAILED: []
+};
+
+const ROLE_TRANSITIONS = {
+  SENDER: [],
+  DISPATCHER: STATUS_FLOW,
+  COURIER: ['PICKED_UP', 'ARRIVED_AT_HUB', 'DEPARTED_HUB', 'OUT_FOR_DELIVERY', 'DELIVERED', 'DELIVERY_FAILED'],
+  ADMIN: STATUS_FLOW
+};
+
+const canTransition = (current, next, role) => {
+  if (!ALLOWED_TRANSITIONS[current]) return false;
+  const nextAllowed = ALLOWED_TRANSITIONS[current].includes(next);
+  const roleAllowed = ROLE_TRANSITIONS[role]?.includes(next);
+  return nextAllowed && roleAllowed;
+};
+
+module.exports = { STATUS_FLOW, ALLOWED_TRANSITIONS, ROLE_TRANSITIONS, canTransition };
