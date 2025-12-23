@@ -1,10 +1,10 @@
 import './globals.css';
 import { ReactNode } from 'react';
-import { AppRouterCacheProvider } from '@mui/material-nextjs/v14-appRouter';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import TopNav from './components/TopNav';
+import ThemeRegistry from './components/ThemeRegistry';
 import { SWRConfig } from 'swr';
 
+<<<<<<< HEAD
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -21,6 +21,8 @@ const theme = createTheme({
   }
 });
 
+=======
+>>>>>>> aaf4670 (fix)
 export const metadata = {
   title: 'Office Delivery Tracking',
   description: 'Track office delivery requests and couriers'
@@ -30,15 +32,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AppRouterCacheProvider>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <SWRConfig value={{ refreshInterval: 5000 }}>
-              <TopNav />
-              {children}
-            </SWRConfig>
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+        <ThemeRegistry>
+          <SWRConfig value={{ refreshInterval: 5000 }}>
+            <TopNav />
+            {children}
+          </SWRConfig>
+        </ThemeRegistry>
       </body>
     </html>
   );
