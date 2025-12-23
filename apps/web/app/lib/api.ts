@@ -1,0 +1,65 @@
+export type User = {
+  id: number;
+  name: string;
+  email: string;
+  role: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN';
+};
+
+export type Delivery = {
+  id: number;
+  trackingCode: string;
+  title: string;
+  description: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: string;
+  senderId: number;
+  receiverName: string;
+  receiverPhone: string;
+  destinationAddress: string;
+  createdAt: string;
+};
+
+export type DeliveryEvent = {
+  id: number;
+  type: string;
+  note?: string | null;
+  locationText?: string | null;
+  createdAt: string;
+  createdBy?: { name: string; role: string };
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+async function apiFetch(path: string, options: RequestInit = {}, token?: string) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>)
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(error.message || 'Request failed');
+  }
+  return res.json();
+}
+
+export const authApi = {
+  login: (data: { email: string; password: string }) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  register: (data: { name: string; email: string; password: string; role: User['role'] }) =>
+    apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) })
+};
+
+export const deliveryApi = {
+  create: (token: string, data: Partial<Delivery>) => apiFetch('/deliveries', { method: 'POST', body: JSON.stringify(data) }, token),
+  mine: (token: string) => apiFetch('/me/deliveries', { method: 'GET' }, token),
+  adminAll: (token: string) => apiFetch('/deliveries', { method: 'GET' }, token),
+  adminStats: (token: string) => apiFetch('/stats', { method: 'GET' }, token),
+  assign: (token: string, id: number, courierId: number) =>
+    apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
+  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string }) =>
+    apiFetch(`/deliveries/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
+  addEvent: (token: string, id: number, payload: { type: string; note?: string; locationText?: string }) =>
+    apiFetch(`/deliveries/${id}/events`, { method: 'POST', body: JSON.stringify(payload) }, token),
+  publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`)
+};
