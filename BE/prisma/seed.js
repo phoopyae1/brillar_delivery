@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { generateTrackingCode } = require('../src/utils/trackingCode');
