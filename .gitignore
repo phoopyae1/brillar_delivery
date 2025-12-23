@@ -1,8 +1,7 @@
 node_modules
 .env
-.apps/api/.env
-apps/api/.env
-apps/web/.env
+BE/.env
+FE/.env
 pnpm-lock.yaml
 npm-debug.log
 .DS_Store
