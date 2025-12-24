@@ -37,29 +37,68 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
+    <Container 
+      maxWidth="sm" 
+      sx={{ 
+        py: 4,
+        minHeight: 'calc(100vh - 64px)',
+        display: 'flex',
+        alignItems: 'center'
+      }}
+    >
+      <Paper 
+        sx={{ 
+          p: 4,
+          width: '100%',
+          bgcolor: '#1F1F1F',
+          border: '1px solid rgba(201, 162, 39, 0.2)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
+        }}
+      >
+        <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
           Register
         </Typography>
-        {error && <Alert severity="error">{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         <Stack spacing={2} sx={{ mt: 2 }}>
-          <TextField label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <TextField label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <TextField 
+            label="Name" 
+            value={form.name} 
+            onChange={(e) => setForm({ ...form, name: e.target.value })} 
+            fullWidth
+          />
+          <TextField 
+            label="Email" 
+            value={form.email} 
+            onChange={(e) => setForm({ ...form, email: e.target.value })} 
+            fullWidth
+          />
           <TextField
             label="Password"
             type="password"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            fullWidth
           />
-          <TextField select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+          <TextField 
+            select 
+            label="Role" 
+            value={form.role} 
+            onChange={(e) => setForm({ ...form, role: e.target.value })}
+            fullWidth
+          >
             {['SENDER', 'DISPATCHER', 'COURIER', 'ADMIN'].map((role) => (
               <MenuItem key={role} value={role}>
                 {role}
               </MenuItem>
             ))}
           </TextField>
-          <Button variant="contained" onClick={handleSubmit} disabled={loading}>
+          <Button 
+            variant="contained" 
+            onClick={handleSubmit} 
+            disabled={loading}
+            fullWidth
+            sx={{ mt: 2 }}
+          >
             {loading ? 'Creating...' : 'Register'}
           </Button>
         </Stack>

@@ -9,7 +9,7 @@ const {
   eventSchema
 } = require('../validators');
 const { generateTrackingCode } = require('../utils/trackingCode');
-const { canTransition } = require('../constants/statuses');
+const { canTransition, getAllowedTransitions } = require('../constants/statuses');
 const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -27,8 +27,11 @@ const createEvent = ({ deliveryId, type, note, locationText, userId }) =>
   });
 
 const assertDeliveryAccess = async (user, deliveryId) => {
+  const id = Number(deliveryId);
+  if (!id || isNaN(id)) throw new AppError(400, 'Invalid delivery ID');
+  
   const delivery = await prisma.delivery.findUnique({
-    where: { id: deliveryId },
+    where: { id },
     include: { assignments: true }
   });
   if (!delivery) throw new AppError(404, 'Delivery not found');
@@ -37,6 +40,7 @@ const assertDeliveryAccess = async (user, deliveryId) => {
   if (user.role === 'COURIER') {
     const assigned = delivery.assignments.some((a) => a.courierId === user.id);
     if (assigned) return delivery;
+    throw new AppError(403, `Delivery ${deliveryId} is not assigned to you. Only assigned deliveries can be updated.`);
   }
   throw new AppError(403, 'Forbidden');
 };
@@ -97,17 +101,35 @@ router.get('/deliveries/:id', requireAuth, async (req, res) => {
 router.get('/me/deliveries', requireAuth, async (req, res) => {
   const role = req.user.role;
   let deliveries = [];
+  const includeEvents = {
+    events: {
+      include: { createdBy: { select: { id: true, name: true, role: true } } },
+      orderBy: { createdAt: 'asc' }
+    }
+  };
+  
   if (role === 'SENDER') {
-    deliveries = await prisma.delivery.findMany({ where: { senderId: req.user.id }, orderBy: { createdAt: 'desc' } });
+    deliveries = await prisma.delivery.findMany({ 
+      where: { senderId: req.user.id }, 
+      include: includeEvents,
+      orderBy: { createdAt: 'desc' } 
+    });
   } else if (role === 'COURIER') {
     deliveries = await prisma.delivery.findMany({
       where: { assignments: { some: { courierId: req.user.id } } },
+      include: includeEvents,
       orderBy: { createdAt: 'desc' }
     });
   } else if (role === 'DISPATCHER') {
-    deliveries = await prisma.delivery.findMany({ orderBy: { createdAt: 'desc' } });
+    deliveries = await prisma.delivery.findMany({ 
+      include: includeEvents,
+      orderBy: { createdAt: 'desc' } 
+    });
   } else if (role === 'ADMIN') {
-    deliveries = await prisma.delivery.findMany({ orderBy: { createdAt: 'desc' } });
+    deliveries = await prisma.delivery.findMany({ 
+      include: includeEvents,
+      orderBy: { createdAt: 'desc' } 
+    });
   }
   res.json(deliveries);
 });
@@ -143,7 +165,11 @@ router.patch(
     const delivery = await assertDeliveryAccess(req.user, deliveryId);
     const nextStatus = req.body.status;
     if (!canTransition(delivery.status, nextStatus, req.user.role)) {
-      throw new AppError(400, 'Invalid status transition');
+      const allowed = getAllowedTransitions(delivery.status, req.user.role);
+      throw new AppError(
+        400, 
+        `Invalid status transition from ${delivery.status} to ${nextStatus}. Allowed transitions: ${allowed.length > 0 ? allowed.join(', ') : 'none'}`
+      );
     }
     const updated = await prisma.delivery.update({ where: { id: deliveryId }, data: { status: nextStatus } });
     const event = await createEvent({
@@ -179,6 +205,15 @@ router.post(
 router.get('/deliveries', requireAuth, requireRoles('ADMIN', 'DISPATCHER'), async (req, res) => {
   const deliveries = await prisma.delivery.findMany({ include: includeDeliveryRelations, orderBy: { createdAt: 'desc' } });
   res.json(deliveries);
+});
+
+router.get('/couriers', requireAuth, requireRoles('DISPATCHER', 'ADMIN'), async (_req, res) => {
+  const couriers = await prisma.user.findMany({
+    where: { role: 'COURIER' },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: 'asc' }
+  });
+  res.json(couriers);
 });
 
 router.get('/stats', requireAuth, requireRoles('ADMIN'), async (_req, res) => {

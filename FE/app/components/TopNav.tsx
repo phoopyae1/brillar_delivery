@@ -4,19 +4,34 @@ import { AppBar, Toolbar, Typography, Stack, Button } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
 
-const links = [
-  { href: '/', label: 'Home' },
-  { href: '/track/quick', label: 'Track' },
-  { href: '/dashboard/sender', label: 'Sender' },
-  { href: '/dashboard/dispatcher', label: 'Dispatcher' },
-  { href: '/dashboard/courier', label: 'Courier' },
-  { href: '/admin', label: 'Admin' }
+const allLinks = [
+  { href: '/', label: 'Home', roles: [] }, // Everyone can see Home
+  { href: '/track/quick', label: 'Track', roles: [] }, // Everyone can see Track
+  { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'] }, // ADMIN has access
+  { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'] }, // ADMIN has access
+  { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'DISPATCHER', 'ADMIN'] }, // ADMIN has access
+  { href: '/admin', label: 'Admin', roles: ['ADMIN'] } // ADMIN only
 ];
 
 export default function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+
+  // Filter links based on user role
+  const getVisibleLinks = () => {
+    if (!user) {
+      // Not logged in - show only public links
+      return allLinks.filter(link => link.roles.length === 0);
+    }
+    // Logged in - show public links + role-specific links
+    // ADMIN role has access to all dashboards (sender, dispatcher, courier, admin)
+    return allLinks.filter(link => 
+      link.roles.length === 0 || link.roles.includes(user.role)
+    );
+  };
+
+  const visibleLinks = getVisibleLinks();
 
   return (
     <AppBar
@@ -31,10 +46,10 @@ export default function TopNav() {
     >
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', py: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: -0.5 }}>
-          Office Delivery Tracker
+          Brillar Delivery
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center">
-          {links.map((link) => (
+          {visibleLinks.map((link) => (
             <Button
               key={link.href}
               component={Link}

@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 app.get('/', (_req, res) => {
-  res.json({ message: 'Office Delivery Tracking API' });
+  res.json({ message: 'Brillar Delivery API' });
 });
 
 app.use('/auth', authRoutes);

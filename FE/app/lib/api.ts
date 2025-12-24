@@ -55,6 +55,7 @@ export const deliveryApi = {
   mine: (token: string) => apiFetch('/me/deliveries', { method: 'GET' }, token),
   adminAll: (token: string) => apiFetch('/deliveries', { method: 'GET' }, token),
   adminStats: (token: string) => apiFetch('/stats', { method: 'GET' }, token),
+  getCouriers: (token: string) => apiFetch('/couriers', { method: 'GET' }, token),
   assign: (token: string, id: number, courierId: number) =>
     apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
   updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string }) =>

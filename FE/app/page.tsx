@@ -57,7 +57,7 @@ export default function HomePage() {
           <Grid item xs={12} md={6}>
             <Chip
               icon={<BoltIcon />}
-              label="Frictionless office deliveries"
+              label="Frictionless deliveries"
               color="primary"
               sx={{ mb: 2, fontWeight: 600, borderRadius: '999px', bgcolor: 'primary.light', color: 'primary.dark' }}
             />
@@ -113,9 +113,9 @@ export default function HomePage() {
               sx={{
                 p: 4,
                 borderRadius: 4,
-                bgcolor: 'var(--surface)',
-                border: 'var(--border)',
-                boxShadow: '0 20px 60px rgba(15, 23, 42, 0.12)'
+                bgcolor: 'background.paper',
+                border: '1px solid rgba(201, 162, 39, 0.2)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
               }}
             >
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
@@ -123,7 +123,7 @@ export default function HomePage() {
               </Typography>
               <Stack spacing={2}>
                 {[1, 2, 3].map((item) => (
-                  <Card key={item} variant="outlined" sx={{ borderRadius: 3, borderColor: 'rgba(15,23,42,0.08)' }}>
+                  <Card key={item} variant="outlined" sx={{ borderRadius: 3, borderColor: 'rgba(201, 162, 39, 0.15)', bgcolor: '#1A1A1A' }}>
                     <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -162,15 +162,22 @@ export default function HomePage() {
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {features.map((feature) => (
               <Grid item xs={12} md={4} key={feature.title}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    height: '100%',
-                    borderRadius: 3,
-                    borderColor: 'rgba(15,23,42,0.08)',
-                    boxShadow: '0 15px 45px rgba(15, 23, 42, 0.08)'
-                  }}
-                >
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      height: '100%',
+                      borderRadius: 3,
+                      borderColor: 'rgba(201, 162, 39, 0.15)',
+                      bgcolor: '#1F1F1F',
+                      boxShadow: '0 15px 45px rgba(0, 0, 0, 0.2)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: '#242424',
+                        borderColor: 'rgba(201, 162, 39, 0.3)',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
                   <CardContent>
                     <Box sx={{ mb: 2 }}>{feature.icon}</Box>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
