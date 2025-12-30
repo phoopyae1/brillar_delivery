@@ -16,6 +16,7 @@ export type Delivery = {
   receiverName: string;
   receiverPhone: string;
   destinationAddress: string;
+  pdfUrl?: string | null;
   createdAt: string;
 };
 
@@ -24,6 +25,7 @@ export type DeliveryEvent = {
   type: string;
   note?: string | null;
   locationText?: string | null;
+  proofImageUrl?: string | null;
   createdAt: string;
   createdBy?: { name: string; role: string };
 };
@@ -58,9 +60,38 @@ export const deliveryApi = {
   getCouriers: (token: string) => apiFetch('/couriers', { method: 'GET' }, token),
   assign: (token: string, id: number, courierId: number) =>
     apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
-  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string }) =>
+  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string; proofImageUrl?: string }) =>
     apiFetch(`/deliveries/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
   addEvent: (token: string, id: number, payload: { type: string; note?: string; locationText?: string }) =>
     apiFetch(`/deliveries/${id}/events`, { method: 'POST', body: JSON.stringify(payload) }, token),
-  publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`)
+  publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`),
+  downloadPDF: async (token: string, id: number) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    try {
+      const res = await fetch(`${API_URL}/deliveries/${id}/pdf`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(error.message || 'Failed to download PDF');
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `delivery-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('PDF download error:', error);
+      throw error;
+    }
+  }
 };

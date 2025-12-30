@@ -60,6 +60,7 @@ model Delivery {
   receiverName       String
   receiverPhone      String
   destinationAddress String
+  pdfUrl             String?         // PDF file name for delivery label
   assignments        Assignment[]
   events             DeliveryEvent[]
   createdAt          DateTime        @default(now())
@@ -81,6 +82,7 @@ model DeliveryEvent {
   type         DeliveryStatus
   note         String?
   locationText String?
+  proofImageUrl String?        // Base64 encoded image or URL for delivery proof
   createdBy    User            @relation("UserEvents", fields: [createdById], references: [id])
   createdById  Int
   createdAt    DateTime        @default(now())

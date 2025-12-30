@@ -1,4 +1,5 @@
 node_modules
+BE/pdfs/
 .env
 BE/.env
 FE/.env

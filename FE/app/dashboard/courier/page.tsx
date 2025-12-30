@@ -48,11 +48,25 @@ export default function CourierDashboard() {
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
+  const [proofImage, setProofImage] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && !['COURIER', 'ADMIN', 'DISPATCHER'].includes(user.role)) router.push('/');
   }, [ready, user, token, router]);
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleStatus = async () => {
     if (!token || !updateForm.id) return;
@@ -77,16 +91,31 @@ export default function CourierDashboard() {
       }
     }
     
+    // Validate proof image for DELIVERED status
+    if (updateForm.status === 'DELIVERED' && !proofImage) {
+      setFormError('Please attach a delivery proof image when marking as DELIVERED');
+      return;
+    }
+    
     setFormError('');
     try {
+      let proofImageUrl: string | undefined;
+      if (updateForm.status === 'DELIVERED' && proofImage) {
+        proofImageUrl = await convertImageToBase64(proofImage);
+      }
+      
       await deliveryApi.updateStatus(token, id, {
         status: updateForm.status,
         note: updateForm.note,
-        locationText: updateForm.locationText
+        locationText: updateForm.locationText,
+        proofImageUrl
       });
       await mutate();
       setUpdateForm({ id: '', status: courierStatuses[0], note: '', locationText: '' });
       setSelectedDelivery(null);
+      setProofImage(null);
+      setProofPreview(null);
+      setPage(1);
     } catch (e: any) {
       setFormError(e.message || 'Failed to update status. Make sure the delivery is assigned to you and the status transition is valid.');
     }
@@ -188,7 +217,15 @@ export default function CourierDashboard() {
                 select 
                 label="Status" 
                 value={updateForm.status} 
-                onChange={(e) => setUpdateForm({ ...updateForm, status: e.target.value })} 
+                onChange={(e) => {
+                  const newStatus = e.target.value;
+                  setUpdateForm({ ...updateForm, status: newStatus });
+                  // Clear proof image if status changes away from DELIVERED
+                  if (newStatus !== 'DELIVERED') {
+                    setProofImage(null);
+                    setProofPreview(null);
+                  }
+                }} 
                 fullWidth
                 disabled={!selectedDelivery || getValidStatuses(selectedDelivery?.status || '').length === 0}
               >
@@ -205,6 +242,70 @@ export default function CourierDashboard() {
                 onChange={(e) => setUpdateForm({ ...updateForm, locationText: e.target.value })}
                 fullWidth
               />
+              {updateForm.status === 'DELIVERED' && (
+                <Stack spacing={1}>
+                  <Button
+                    variant="outlined"
+                    component="label"
+                    fullWidth
+                    sx={{
+                      borderColor: 'rgba(201, 162, 39, 0.5)',
+                      color: 'text.primary',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        bgcolor: 'rgba(201, 162, 39, 0.1)'
+                      }
+                    }}
+                  >
+                    {proofImage ? 'Change Proof Image' : 'Attach Delivery Proof'}
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setProofImage(file);
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setProofPreview(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </Button>
+                  {proofPreview && (
+                    <Stack spacing={1}>
+                      <Typography variant="caption" color="text.secondary">
+                        Preview:
+                      </Typography>
+                      <img
+                        src={proofPreview}
+                        alt="Delivery proof preview"
+                        style={{
+                          width: '100%',
+                          maxHeight: '200px',
+                          objectFit: 'contain',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(201, 162, 39, 0.3)'
+                        }}
+                      />
+                      <Button
+                        size="small"
+                        variant="text"
+                        color="error"
+                        onClick={() => {
+                          setProofImage(null);
+                          setProofPreview(null);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </Stack>
+                  )}
+                </Stack>
+              )}
               <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                 <Button variant="contained" onClick={handleStatus} disabled={!updateForm.id} sx={{ flex: 1 }}>
                   Update status
@@ -246,11 +347,17 @@ export default function CourierDashboard() {
                     onClick={() => {
                       setSelectedDelivery(d);
                       const validStatuses = getValidStatuses(d.status);
+                      const newStatus = validStatuses.length > 0 ? validStatuses[0] : updateForm.status;
                       setUpdateForm({ 
                         ...updateForm, 
                         id: String(d.id),
-                        status: validStatuses.length > 0 ? validStatuses[0] : updateForm.status
+                        status: newStatus
                       });
+                      // Clear proof image if new status is not DELIVERED
+                      if (newStatus !== 'DELIVERED') {
+                        setProofImage(null);
+                        setProofPreview(null);
+                      }
                     }}
                     sx={{
                       bgcolor: index % 2 === 0 ? 'transparent' : 'rgba(201, 162, 39, 0.05)',
@@ -316,6 +423,8 @@ export default function CourierDashboard() {
                   onChange={(_, value) => {
                     setPage(value);
                     setSelectedDelivery(null); // Clear selected delivery when changing page
+                    setProofImage(null);
+                    setProofPreview(null);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   color="primary"

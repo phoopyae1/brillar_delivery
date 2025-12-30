@@ -100,6 +100,26 @@ export default function PublicTrackPage() {
                         📍 {event.locationText}
                       </Typography>
                     )}
+                    {event.proofImageUrl && event.type === 'DELIVERED' && (
+                      <Stack spacing={1} sx={{ mt: 1 }}>
+                        <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+                          Delivery Proof:
+                        </Typography>
+                        <img
+                          src={event.proofImageUrl}
+                          alt="Delivery proof"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '300px',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(201, 162, 39, 0.3)',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => window.open(event.proofImageUrl!, '_blank')}
+                        />
+                      </Stack>
+                    )}
                     {event.createdBy && (
                       <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
                         By {event.createdBy.name} ({event.createdBy.role})

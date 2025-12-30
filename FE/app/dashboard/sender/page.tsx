@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import DownloadIcon from '@mui/icons-material/Download';
 import { priorityLabels, statusLabels } from '../../lib/status';
 import { DeliveryEvent } from '../../lib/api';
 
@@ -217,9 +218,33 @@ export default function SenderDashboard() {
                           </Stack>
                         }
                       />
-                      <IconButton size="small">
-                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                      </IconButton>
+                      <Stack direction="row" spacing={1}>
+                        {d.pdfUrl && (
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (token) {
+                                deliveryApi.downloadPDF(token, d.id).catch((err) => {
+                                  alert('Failed to download PDF: ' + err.message);
+                                });
+                              }
+                            }}
+                            sx={{
+                              color: 'primary.main',
+                              '&:hover': {
+                                bgcolor: 'rgba(201, 162, 39, 0.1)'
+                              }
+                            }}
+                            title="Download PDF Label"
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        )}
+                        <IconButton size="small">
+                          {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </IconButton>
+                      </Stack>
                     </ListItem>
                     
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -255,6 +280,26 @@ export default function SenderDashboard() {
                                   <Typography variant="body2" color="text.secondary">
                                     {event.note}
                                   </Typography>
+                                )}
+                                {event.proofImageUrl && event.type === 'DELIVERED' && (
+                                  <Stack spacing={1} sx={{ mt: 1 }}>
+                                    <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+                                      Delivery Proof:
+                                    </Typography>
+                                    <img
+                                      src={event.proofImageUrl}
+                                      alt="Delivery proof"
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '300px',
+                                        objectFit: 'contain',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(201, 162, 39, 0.3)',
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={() => window.open(event.proofImageUrl!, '_blank')}
+                                    />
+                                  </Stack>
                                 )}
                                 <Stack direction="row" spacing={1} alignItems="center">
                                   <Typography variant="caption" color="text.secondary">

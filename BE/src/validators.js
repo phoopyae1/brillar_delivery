@@ -38,7 +38,8 @@ const createDeliverySchema = z.object({
 const statusUpdateSchema = z.object({
   status: statusEnum,
   note: z.string().optional(),
-  locationText: z.string().optional()
+  locationText: z.string().optional(),
+  proofImageUrl: z.string().optional() // Base64 encoded image for delivery proof
 });
 
 const assignSchema = z.object({

@@ -11,6 +11,9 @@ const {
 const { generateTrackingCode } = require('../utils/trackingCode');
 const { canTransition, getAllowedTransitions } = require('../constants/statuses');
 const { AppError } = require('../middleware/errorHandler');
+const { generateDeliveryPDF, getPDFPath } = require('../utils/pdfGenerator');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
 const requireAuth = [authMiddleware];
@@ -21,9 +24,9 @@ const includeDeliveryRelations = {
   events: { include: { createdBy: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: 'asc' } }
 };
 
-const createEvent = ({ deliveryId, type, note, locationText, userId }) =>
+const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, userId }) =>
   prisma.deliveryEvent.create({
-    data: { deliveryId, type, note, locationText, createdById: userId }
+    data: { deliveryId, type, note, locationText, proofImageUrl, createdById: userId }
   });
 
 const assertDeliveryAccess = async (user, deliveryId) => {
@@ -48,6 +51,10 @@ const assertDeliveryAccess = async (user, deliveryId) => {
 router.post('/deliveries', requireAuth, requireRoles('SENDER', 'ADMIN'), validateBody(createDeliverySchema), async (req, res) => {
   const senderId = req.user.id;
   const trackingCode = generateTrackingCode();
+  
+  // Get sender details for PDF
+  const sender = await prisma.user.findUnique({ where: { id: senderId } });
+  
   const delivery = await prisma.delivery.create({
     data: {
       ...req.body,
@@ -56,6 +63,23 @@ router.post('/deliveries', requireAuth, requireRoles('SENDER', 'ADMIN'), validat
       status: 'CREATED'
     }
   });
+  
+  // Generate PDF with QR code
+  try {
+    console.log('Generating PDF for delivery:', delivery.trackingCode);
+    const pdfFileName = await generateDeliveryPDF(delivery, sender);
+    console.log('PDF generated, updating delivery with filename:', pdfFileName);
+    const updated = await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: { pdfUrl: pdfFileName }
+    });
+    delivery.pdfUrl = updated.pdfUrl;
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    console.error('Error stack:', error.stack);
+    // Continue even if PDF generation fails - delivery is still created
+  }
+  
   await createEvent({ deliveryId: delivery.id, type: 'CREATED', note: 'Delivery created', userId: senderId });
   res.status(201).json(delivery);
 });
@@ -80,6 +104,7 @@ router.get('/deliveries/:trackingCode/public', async (req, res) => {
           id: true,
           type: true,
           note: true,
+          proofImageUrl: true,
           locationText: true,
           createdAt: true,
           createdBy: { select: { name: true, role: true } }
@@ -177,6 +202,7 @@ router.patch(
       type: nextStatus,
       note: req.body.note,
       locationText: req.body.locationText,
+      proofImageUrl: nextStatus === 'DELIVERED' ? req.body.proofImageUrl : undefined,
       userId: req.user.id
     });
     res.json({ delivery: updated, event });
@@ -224,6 +250,48 @@ router.get('/stats', requireAuth, requireRoles('ADMIN'), async (_req, res) => {
     prisma.delivery.count({ where: { status: 'IN_TRANSIT' } })
   ]);
   res.json({ users, deliveries, delivered, inTransit });
+});
+
+// Download PDF endpoint
+router.get('/deliveries/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const deliveryId = Number(req.params.id);
+    if (!deliveryId || isNaN(deliveryId)) {
+      throw new AppError(400, 'Invalid delivery ID');
+    }
+    
+    const delivery = await assertDeliveryAccess(req.user, deliveryId);
+    
+    if (!delivery.pdfUrl) {
+      throw new AppError(404, 'PDF not found for this delivery');
+    }
+    
+    const pdfPath = getPDFPath(delivery.pdfUrl);
+    
+    if (!fs.existsSync(pdfPath)) {
+      throw new AppError(404, 'PDF file not found');
+    }
+    
+    const absolutePath = path.resolve(pdfPath);
+    
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="delivery-${delivery.trackingCode}.pdf"`);
+    
+    res.sendFile(absolutePath, (err) => {
+      if (err) {
+        console.error('Error sending PDF file:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Error sending PDF file' });
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    console.error('Unexpected error in PDF download:', error);
+    throw new AppError(500, 'Internal server error');
+  }
 });
 
 module.exports = router;
