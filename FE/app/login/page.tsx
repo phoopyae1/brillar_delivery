@@ -4,6 +4,15 @@ import { useRouter } from 'next/navigation';
 import { authApi } from '../lib/api';
 import { Button, Container, Paper, Stack, TextField, Typography, Alert } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
+import { loginAtenxionSender, fetchSenderIntegrationEmbed } from '../lib/atenxion';
+import { integrationApi } from '../lib/api';
+
+interface SenderSession {
+  userId: number;
+  token?: string;
+  email?: string;
+  [key: string]: any;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +21,19 @@ export default function LoginPage() {
   const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Load session from localStorage on mount
+  const [session, setSession] = useState<SenderSession | null>(() => {
+    try {
+      const stored = localStorage.getItem("sender_session");
+      if (stored) {
+        return JSON.parse(stored) as SenderSession;
+      }
+    } catch {
+      // Ignore errors
+    }
+    return null;
+  });
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -19,7 +41,66 @@ export default function LoginPage() {
     try {
       const data = await authApi.login({ email, password });
       setAuth(data);
-      router.push('/dashboard/sender');
+      
+      // Store session in localStorage
+      let newSession: SenderSession | null = null;
+      if (data.user && data.user.id) {
+        newSession = {
+          userId: data.user.id,
+          token: data.token,
+          email: data.user.email,
+        };
+        localStorage.setItem("sender_session", JSON.stringify(newSession));
+        setSession(newSession);
+      }
+      
+      // Call Atenxion login - use userId from newly created session
+      const userIdToUse = newSession?.userId || session?.userId || data.user?.id;
+      
+      if (userIdToUse) {
+        try {
+          // Fetch contextKey from MongoDB integration
+          let contextKey: string | null = null;
+          try {
+            const allIntegrations = await integrationApi.getAll();
+            const embed = allIntegrations.find((int) => 
+              int.iframeScriptTag?.includes('atenxion') || 
+              int.iframeScriptTag?.includes('widget')
+            ) || allIntegrations[0] || null;
+            contextKey = embed?.contextualKey || null;
+            console.log('[Login] Fetched contextKey from MongoDB:', contextKey ? contextKey.substring(0, 50) + '...' : 'none');
+          } catch (integrationError) {
+            console.warn('[Login] Error fetching integration for contextKey:', integrationError);
+          }
+
+          await loginAtenxionSender(
+            {
+              userId: userIdToUse, // Use userId from session
+            },
+            // data.user,
+            contextKey
+          );
+          console.log('Atenxion sender login completed');
+        } catch (atenxionError) {
+          // Log but don't block the login flow
+          console.error('Atenxion login error (non-blocking):', atenxionError);
+        }
+      }
+      
+      // Route based on role if available, otherwise default to sender dashboard with ID
+      const role = data.user?.role;
+      if (role === 'DISPATCHER') {
+        router.push('/dashboard/dispatcher');
+      } else if (role === 'COURIER') {
+        router.push('/dashboard/courier');
+      } else if (role === 'ADMIN') {
+        router.push('/admin');
+      } else if (data.user?.id) {
+        // Redirect to /sender/{senderid} with sender ID in URL
+        router.push(`/sender/${data.user.id}`);
+      } else {
+        router.push('/dashboard/sender');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

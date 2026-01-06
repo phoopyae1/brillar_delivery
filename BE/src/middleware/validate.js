@@ -1,12 +1,12 @@
 const { AppError } = require('./errorHandler');
 
-const validateBody = (schema) => (req, _res, next) => {
+const validateBody = (schema) => (req, res, next) => {
   try {
     req.body = schema.parse(req.body);
     next();
   } catch (err) {
     err.name = err.name || 'ZodError';
-    throw err instanceof Error ? err : new AppError(400, 'Validation failed');
+    next(err instanceof Error ? err : new AppError(400, 'Validation failed'));
   }
 };
 

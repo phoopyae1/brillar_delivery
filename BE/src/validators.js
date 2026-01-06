@@ -52,11 +52,18 @@ const eventSchema = z.object({
   locationText: z.string().optional()
 });
 
+const integrationSchema = z.object({
+  name: z.string().optional(),
+  contextualKey: z.string().min(1, 'Contextual key is required'),
+  iframeScriptTag: z.string().min(1, 'Iframe/Script tag is required')
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   createDeliverySchema,
   statusUpdateSchema,
   assignSchema,
-  eventSchema
+  eventSchema,
+  integrationSchema
 };

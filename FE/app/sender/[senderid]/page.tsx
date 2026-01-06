@@ -1,7 +1,7 @@
 'use client';
 import useSWR from 'swr';
 import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { deliveryApi, integrationApi, Integration } from '../../lib/api';
 import {
@@ -30,9 +30,10 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { priorityLabels, statusLabels } from '../../lib/status';
 import { DeliveryEvent } from '../../lib/api';
 
-export default function SenderDashboard() {
+export default function SenderDashboardById() {
+  const params = useParams();
+  const senderId = params?.senderid as string;
   const { user, token, ready } = useAuth();
-  console.log('user', user);
   const router = useRouter();
   const { data, error, mutate, isLoading } = useSWR(token ? '/sender/deliveries' : null, () => deliveryApi.mine(token!));
   const { data: integrations } = useSWR('/integrations', () => integrationApi.getAll());
@@ -62,10 +63,6 @@ export default function SenderDashboard() {
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && user.role !== 'SENDER' && user.role !== 'ADMIN') router.push('/');
-    // Redirect to /sender/{senderid} route with sender ID in URL
-    if (ready && user && user.id && (user.role === 'SENDER' || user.role === 'ADMIN')) {
-      router.replace(`/sender/${user.id}`);
-    }
   }, [ready, user, token, router]);
 
   const toggleExpand = (deliveryId: number) => {
@@ -166,19 +163,21 @@ export default function SenderDashboard() {
       }
 
       // Add sender ID to URL if it's an iframe (not a script)
-      if (!isScript && user.id) {
+      // Use senderId from URL params if available, otherwise use user.id
+      const userIdToUse = senderId || (user.id ? String(user.id) : null);
+      if (!isScript && userIdToUse) {
         try {
           if (url.startsWith('http://') || url.startsWith('https://')) {
             const urlObj = new URL(url);
-            urlObj.searchParams.set('userId', String(user.id));
+            urlObj.searchParams.set('userId', userIdToUse);
             url = urlObj.toString();
           } else {
             const separator = url.includes('?') ? '&' : '?';
-            url = `${url}${separator}userId=${user.id}`;
+            url = `${url}${separator}userId=${userIdToUse}`;
           }
         } catch (error) {
           const separator = url.includes('?') ? '&' : '?';
-          url = `${url}${separator}userId=${user.id}`;
+          url = `${url}${separator}userId=${userIdToUse}`;
         }
       }
 
@@ -225,12 +224,12 @@ export default function SenderDashboard() {
         }
       });
     };
-  }, [integrations, user]);
+  }, [integrations, user, senderId]);
 
   return (
     <Container sx={{ py: 4, bgcolor: 'transparent' }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-        Sender Dashboard
+        Sender Dashboard {senderId && `(ID: ${senderId})`}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error.message}</Alert>}
       {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
@@ -566,3 +565,4 @@ export default function SenderDashboard() {
     </Container>
   );
 }
+

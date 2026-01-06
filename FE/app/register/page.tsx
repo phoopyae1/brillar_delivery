@@ -28,7 +28,18 @@ export default function RegisterPage() {
         role: form.role as any
       });
       setAuth(data);
-      router.push('/dashboard/sender');
+      // Redirect to /sender/{senderid} with sender ID in URL
+      if (data.user?.id && (data.user.role === 'SENDER' || data.user.role === 'ADMIN')) {
+        router.push(`/sender/${data.user.id}`);
+      } else if (data.user?.role === 'DISPATCHER') {
+        router.push('/dashboard/dispatcher');
+      } else if (data.user?.role === 'COURIER') {
+        router.push('/dashboard/courier');
+      } else if (data.user?.role === 'ADMIN') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard/sender');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

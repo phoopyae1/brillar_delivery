@@ -95,3 +95,23 @@ export const deliveryApi = {
     }
   }
 };
+
+export type Integration = {
+  _id?: string;
+  name: string;
+  contextualKey: string;
+  iframeScriptTag: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export const integrationApi = {
+  getAll: () => apiFetch('/integration', { method: 'GET' }),
+  getById: (id: string) => apiFetch(`/integration/${id}`, { method: 'GET' }),
+  getByKey: (key: string) => apiFetch(`/integration/key/${key}`, { method: 'GET' }),
+  create: (data: { contextualKey: string; iframeScriptTag: string; name?: string }) =>
+    apiFetch('/integration', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string }) =>
+    apiFetch(`/integration/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => apiFetch(`/integration/${id}`, { method: 'DELETE' })
+};

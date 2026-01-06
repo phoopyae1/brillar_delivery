@@ -4,10 +4,15 @@ import { AppBar, Toolbar, Typography, Stack, Button } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
 
+// Helper function to get sender link with ID
+const getSenderLink = (userId?: number) => {
+  return userId ? `/sender/${userId}` : '/dashboard/sender';
+};
+
 const allLinks = [
   { href: '/', label: 'Home', roles: [] }, // Everyone can see Home
   { href: '/track/quick', label: 'Track', roles: [] }, // Everyone can see Track
-  { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'] }, // ADMIN has access
+  { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'], dynamic: true }, // ADMIN has access, will be replaced with /sender/{id}
   { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'] }, // ADMIN has access
   { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'DISPATCHER', 'ADMIN'] }, // ADMIN has access
   { href: '/admin', label: 'Admin', roles: ['ADMIN'] } // ADMIN only
@@ -49,34 +54,40 @@ export default function TopNav() {
           Brillar Delivery
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center">
-          {visibleLinks.map((link) => (
-            <Button
-              key={link.href}
-              component={Link}
-              href={link.href}
-              variant={pathname?.startsWith(link.href) ? 'contained' : 'text'}
-              color={pathname?.startsWith(link.href) ? 'primary' : 'inherit'}
-              sx={{
-                textTransform: 'none',
-                borderRadius: '999px',
-                px: 2,
-                border: pathname?.startsWith(link.href)
-                  ? '1px solid rgba(201, 162, 39, 0.24)'
-                  : '1px solid rgba(184, 184, 184, 0.25)',
-                bgcolor: pathname?.startsWith(link.href) ? 'primary.main' : 'transparent',
-                color: pathname?.startsWith(link.href) ? 'primary.contrastText' : 'text.primary',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: pathname?.startsWith(link.href)
-                    ? 'primary.main'
-                    : 'rgba(201, 162, 39, 0.14)',
-                  color: pathname?.startsWith(link.href) ? 'primary.contrastText' : 'white'
-                }
-              }}
-            >
-              {link.label}
-            </Button>
-          ))}
+          {visibleLinks.map((link) => {
+            // Use dynamic sender link with user ID if available
+            const href = (link as any).dynamic && user?.id ? getSenderLink(user.id) : link.href;
+            const isActive = pathname?.startsWith(href) || (href.includes('/sender/') && pathname?.startsWith('/sender/'));
+            
+            return (
+              <Button
+                key={link.href}
+                component={Link}
+                href={href}
+                variant={isActive ? 'contained' : 'text'}
+                color={isActive ? 'primary' : 'inherit'}
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: '999px',
+                  px: 2,
+                  border: isActive
+                    ? '1px solid rgba(201, 162, 39, 0.24)'
+                    : '1px solid rgba(184, 184, 184, 0.25)',
+                  bgcolor: isActive ? 'primary.main' : 'transparent',
+                  color: isActive ? 'primary.contrastText' : 'text.primary',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: isActive
+                      ? 'primary.main'
+                      : 'rgba(201, 162, 39, 0.14)',
+                    color: isActive ? 'primary.contrastText' : 'white'
+                  }
+                }}
+              >
+                {link.label}
+              </Button>
+            );
+          })}
           {user ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2">{user.name} ({user.role})</Typography>
