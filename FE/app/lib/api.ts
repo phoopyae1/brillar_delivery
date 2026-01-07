@@ -1,18 +1,18 @@
 export type User = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN';
 };
 
 export type Delivery = {
-  id: number;
+  id: string;
   trackingCode: string;
   title: string;
   description: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   status: string;
-  senderId: number;
+  senderId: string;
   receiverName: string;
   receiverPhone: string;
   destinationAddress: string;
@@ -21,7 +21,7 @@ export type Delivery = {
 };
 
 export type DeliveryEvent = {
-  id: number;
+  id: string;
   type: string;
   note?: string | null;
   locationText?: string | null;
@@ -58,14 +58,14 @@ export const deliveryApi = {
   adminAll: (token: string) => apiFetch('/deliveries', { method: 'GET' }, token),
   adminStats: (token: string) => apiFetch('/stats', { method: 'GET' }, token),
   getCouriers: (token: string) => apiFetch('/couriers', { method: 'GET' }, token),
-  assign: (token: string, id: number, courierId: number) =>
+  assign: (token: string, id: string, courierId: string) =>
     apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
-  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string; proofImageUrl?: string }) =>
+  updateStatus: (token: string, id: string, payload: { status: string; note?: string; locationText?: string; proofImageUrl?: string }) =>
     apiFetch(`/deliveries/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
-  addEvent: (token: string, id: number, payload: { type: string; note?: string; locationText?: string }) =>
+  addEvent: (token: string, id: string, payload: { type: string; note?: string; locationText?: string }) =>
     apiFetch(`/deliveries/${id}/events`, { method: 'POST', body: JSON.stringify(payload) }, token),
   publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`),
-  downloadPDF: async (token: string, id: number) => {
+  downloadPDF: async (token: string, id: string) => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     try {
       const res = await fetch(`${API_URL}/deliveries/${id}/pdf`, {

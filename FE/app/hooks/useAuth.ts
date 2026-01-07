@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 type User = {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN';

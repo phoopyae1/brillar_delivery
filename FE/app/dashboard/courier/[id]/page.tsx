@@ -1,9 +1,9 @@
 'use client';
 import useSWR from 'swr';
-import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { deliveryApi } from '../../lib/api';
+import { deliveryApi } from '../../../lib/api';
 import {
   Alert,
   Button,
@@ -21,7 +21,7 @@ import {
   Pagination,
   Chip
 } from '@mui/material';
-import { statusLabels } from '../../lib/status';
+import { statusLabels } from '../../../lib/status';
 
 const courierStatuses = ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURNED'];
 
@@ -39,7 +39,9 @@ const getValidStatuses = (currentStatus: string): string[] => {
   return ALLOWED_TRANSITIONS[currentStatus] || [];
 };
 
-export default function CourierDashboard() {
+export default function CourierDashboardById() {
+  const params = useParams();
+  const courierIdFromUrl = params?.id as string;
   const { user, token, ready } = useAuth();
   const router = useRouter();
   const { data, error, mutate, isLoading } = useSWR(token ? '/courier/mine' : null, () => deliveryApi.mine(token!));
@@ -52,13 +54,8 @@ export default function CourierDashboard() {
   const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("userrole",user?.role)
     if (ready && (!user || !token)) router.push('/login');
-    if (ready && user && !['COURIER', 'SENDER', 'DISPATCHER'].includes(user.role)) router.push('/');
-    // Redirect to /dashboard/courier/{courierid} route with courier ID in URL
-    if (ready && user && user.id && (user.role === 'COURIER' || user.role === 'SENDER' || user.role === 'DISPATCHER')) {
-      router.replace(`/dashboard/courier/${user.id}`);
-    }
+    if (ready && user && !['COURIER', 'ADMIN', 'DISPATCHER'].includes(user.role)) router.push('/');
   }, [ready, user, token, router]);
 
   const convertImageToBase64 = (file: File): Promise<string> => {
@@ -171,7 +168,7 @@ export default function CourierDashboard() {
   return (
     <Container sx={{ py: 4, bgcolor: 'transparent' }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-        Courier Dashboard
+        Courier Dashboard {courierIdFromUrl && `(ID: ${courierIdFromUrl})`}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error.message}</Alert>}
       {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
@@ -426,7 +423,7 @@ export default function CourierDashboard() {
                   page={page}
                   onChange={(_, value) => {
                     setPage(value);
-                    setSelectedDelivery(null); // Clear selected delivery when changing page
+                    setSelectedDelivery(null);
                     setProofImage(null);
                     setProofPreview(null);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -453,3 +450,4 @@ export default function CourierDashboard() {
     </Container>
   );
 }
+

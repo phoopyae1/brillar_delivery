@@ -28,15 +28,19 @@ export default function RegisterPage() {
         role: form.role as any
       });
       setAuth(data);
-      // Redirect to /sender/{senderid} with sender ID in URL
-      if (data.user?.id && (data.user.role === 'SENDER' || data.user.role === 'ADMIN')) {
-        router.push(`/sender/${data.user.id}`);
-      } else if (data.user?.role === 'DISPATCHER') {
-        router.push('/dashboard/dispatcher');
-      } else if (data.user?.role === 'COURIER') {
-        router.push('/dashboard/courier');
-      } else if (data.user?.role === 'ADMIN') {
-        router.push('/admin');
+      // Redirect to role-specific dashboard with ID in URL
+      if (data.user?.id) {
+        if (data.user.role === 'SENDER' || (data.user.role === 'ADMIN' && !data.user.role)) {
+          router.push(`/sender/${data.user.id}`);
+        } else if (data.user.role === 'DISPATCHER') {
+          router.push(`/dashboard/dispatcher/${data.user.id}`);
+        } else if (data.user.role === 'COURIER') {
+          router.push(`/dashboard/courier/${data.user.id}`);
+        } else if (data.user.role === 'ADMIN') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard/sender');
+        }
       } else {
         router.push('/dashboard/sender');
       }

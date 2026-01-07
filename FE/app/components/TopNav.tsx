@@ -4,17 +4,25 @@ import { AppBar, Toolbar, Typography, Stack, Button } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
 
-// Helper function to get sender link with ID
-const getSenderLink = (userId?: number) => {
+// Helper functions to get dynamic links with IDs
+const getSenderLink = (userId?: string) => {
   return userId ? `/sender/${userId}` : '/dashboard/sender';
+};
+
+const getDispatcherLink = (userId?: string) => {
+  return userId ? `/dashboard/dispatcher/${userId}` : '/dashboard/dispatcher';
+};
+
+const getCourierLink = (userId?: string) => {
+  return userId ? `/dashboard/courier/${userId}` : '/dashboard/courier';
 };
 
 const allLinks = [
   { href: '/', label: 'Home', roles: [] }, // Everyone can see Home
   { href: '/track/quick', label: 'Track', roles: [] }, // Everyone can see Track
-  { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'], dynamic: true }, // ADMIN has access, will be replaced with /sender/{id}
-  { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'] }, // ADMIN has access
-  { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'DISPATCHER', 'ADMIN'] }, // ADMIN has access
+  { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'], dynamic: true, getLink: getSenderLink }, // ADMIN has access, will be replaced with /sender/{id}
+  { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'], dynamic: true, getLink: getDispatcherLink }, // ADMIN has access, will be replaced with /dashboard/dispatcher/{id}
+  { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'DISPATCHER', 'ADMIN'], dynamic: true, getLink: getCourierLink }, // ADMIN has access, will be replaced with /dashboard/courier/{id}
   { href: '/admin', label: 'Admin', roles: ['ADMIN'] } // ADMIN only
 ];
 
@@ -55,9 +63,15 @@ export default function TopNav() {
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center">
           {visibleLinks.map((link) => {
-            // Use dynamic sender link with user ID if available
-            const href = (link as any).dynamic && user?.id ? getSenderLink(user.id) : link.href;
-            const isActive = pathname?.startsWith(href) || (href.includes('/sender/') && pathname?.startsWith('/sender/'));
+            // Use dynamic link with user ID if available
+            let href = link.href;
+            if ((link as any).dynamic && user?.id && (link as any).getLink) {
+              href = (link as any).getLink(user.id);
+            }
+            const isActive = pathname?.startsWith(href) || 
+              (href.includes('/sender/') && pathname?.startsWith('/sender/')) ||
+              (href.includes('/dashboard/dispatcher/') && pathname?.startsWith('/dashboard/dispatcher/')) ||
+              (href.includes('/dashboard/courier/') && pathname?.startsWith('/dashboard/courier/'));
             
             return (
               <Button

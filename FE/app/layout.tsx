@@ -2,6 +2,7 @@ import './globals.css';
 import { ReactNode } from 'react';
 import TopNav from './components/TopNav';
 import ThemeRegistry from './components/ThemeRegistry';
+import ChatWidget from './components/ChatWidget';
 import { SWRConfig } from 'swr';
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <SWRConfig value={{ refreshInterval: 5000 }}>
             <TopNav />
             {children}
+            <ChatWidget />
           </SWRConfig>
         </ThemeRegistry>
       </body>

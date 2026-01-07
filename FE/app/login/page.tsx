@@ -8,7 +8,7 @@ import { loginAtenxionSender, fetchSenderIntegrationEmbed } from '../lib/atenxio
 import { integrationApi } from '../lib/api';
 
 interface SenderSession {
-  userId: number;
+  userId: string;
   token?: string;
   email?: string;
   [key: string]: any;
@@ -73,11 +73,18 @@ export default function LoginPage() {
             console.warn('[Login] Error fetching integration for contextKey:', integrationError);
           }
 
+          // Map role to proper format for Atenxion API
+          const role = data.user?.role;
+          const roleForAtenxion = role === 'SENDER' ? 'Sender' : 
+                                 role === 'DISPATCHER' ? 'Dispatcher' : 
+                                 role === 'COURIER' ? 'Courier' : 
+                                 'Sender'; // Default to Sender
+          
           await loginAtenxionSender(
             {
               userId: userIdToUse, // Use userId from session
+              role: roleForAtenxion, // Send role: "Sender", "Dispatcher", or "Courier"
             },
-            // data.user,
             contextKey
           );
           console.log('Atenxion sender login completed');
@@ -89,10 +96,10 @@ export default function LoginPage() {
       
       // Route based on role if available, otherwise default to sender dashboard with ID
       const role = data.user?.role;
-      if (role === 'DISPATCHER') {
-        router.push('/dashboard/dispatcher');
-      } else if (role === 'COURIER') {
-        router.push('/dashboard/courier');
+      if (role === 'DISPATCHER' && data.user?.id) {
+        router.push(`/dashboard/dispatcher/${data.user.id}`);
+      } else if (role === 'COURIER' && data.user?.id) {
+        router.push(`/dashboard/courier/${data.user.id}`);
       } else if (role === 'ADMIN') {
         router.push('/admin');
       } else if (data.user?.id) {

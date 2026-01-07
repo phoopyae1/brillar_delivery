@@ -3,7 +3,7 @@ import useSWR from 'swr';
 import { useAuth } from '../../hooks/useAuth';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { deliveryApi, integrationApi, Integration } from '../../lib/api';
+import { deliveryApi } from '../../lib/api';
 import {
   Alert,
   Button,
@@ -21,8 +21,7 @@ import {
   Collapse,
   IconButton,
   Chip,
-  Pagination,
-  Box
+  Pagination
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -36,7 +35,6 @@ export default function SenderDashboardById() {
   const { user, token, ready } = useAuth();
   const router = useRouter();
   const { data, error, mutate, isLoading } = useSWR(token ? '/sender/deliveries' : null, () => deliveryApi.mine(token!));
-  const { data: integrations } = useSWR('/integrations', () => integrationApi.getAll());
   const [form, setForm] = useState({
     title: 'Office Package',
     description: 'Documents',
@@ -46,26 +44,16 @@ export default function SenderDashboardById() {
     destinationAddress: '123 Office St'
   });
   const [submitError, setSubmitError] = useState('');
-  const [expandedDelivery, setExpandedDelivery] = useState<number | null>(null);
+  const [expandedDelivery, setExpandedDelivery] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
-  const [processedIntegrations, setProcessedIntegrations] = useState<Array<{
-    integration: Integration;
-    iframeData: {
-      src: string;
-      title?: string | null;
-      allow?: string | null;
-      loading?: string | null;
-      isScript: boolean;
-    } | null;
-  }>>([]);
 
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && user.role !== 'SENDER' && user.role !== 'ADMIN') router.push('/');
   }, [ready, user, token, router]);
 
-  const toggleExpand = (deliveryId: number) => {
+  const toggleExpand = (deliveryId: string) => {
     setExpandedDelivery(expandedDelivery === deliveryId ? null : deliveryId);
   };
 
@@ -96,135 +84,6 @@ export default function SenderDashboardById() {
       setPage(1);
     }
   }, [data, page, totalPages]);
-
-  // Load and process integrations (scripts and iframes with sender ID)
-  useEffect(() => {
-    if (!integrations || integrations.length === 0 || !user) {
-      setProcessedIntegrations([]);
-      return;
-    }
-
-    const processed: Array<{
-      integration: Integration;
-      iframeData: {
-        src: string;
-        title?: string | null;
-        allow?: string | null;
-        loading?: string | null;
-        isScript: boolean;
-      } | null;
-    }> = [];
-
-    integrations.forEach((integration: Integration) => {
-      if (!integration.iframeScriptTag) return;
-
-      const embedCode = integration.iframeScriptTag;
-      let url: string | null = null;
-      let isScript = false;
-
-      // Check if it's a script tag
-      const scriptTagMatch = embedCode.match(/<script[^>]+src=["']([^"']+)["']/i);
-      if (scriptTagMatch) {
-        isScript = true;
-        url = scriptTagMatch[1];
-      } else {
-        // Try to parse as iframe
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = embedCode;
-        const iframe = wrapper.querySelector('iframe');
-        if (iframe) {
-          url = iframe.getAttribute('src');
-        }
-      }
-
-      if (!url) {
-        // If no URL found, still process for script tags that might be inline
-        if (embedCode.trim().startsWith('<script')) {
-          const scriptId = `integration-script-${integration._id || integration.contextualKey}`;
-          const existingScript = document.getElementById(scriptId);
-          if (existingScript) {
-            existingScript.remove();
-          }
-
-          const script = document.createElement('script');
-          script.id = scriptId;
-          const srcMatch = embedCode.match(/src=["']([^"']+)["']/);
-          const contentMatch = embedCode.match(/>(.*?)<\/script>/s);
-
-          if (srcMatch) {
-            script.src = srcMatch[1];
-            document.head.appendChild(script);
-          } else if (contentMatch) {
-            script.textContent = contentMatch[1];
-            document.head.appendChild(script);
-          }
-        }
-        return;
-      }
-
-      // Add sender ID to URL if it's an iframe (not a script)
-      // Use senderId from URL params if available, otherwise use user.id
-      const userIdToUse = senderId || (user.id ? String(user.id) : null);
-      if (!isScript && userIdToUse) {
-        try {
-          if (url.startsWith('http://') || url.startsWith('https://')) {
-            const urlObj = new URL(url);
-            urlObj.searchParams.set('userId', userIdToUse);
-            url = urlObj.toString();
-          } else {
-            const separator = url.includes('?') ? '&' : '?';
-            url = `${url}${separator}userId=${userIdToUse}`;
-          }
-        } catch (error) {
-          const separator = url.includes('?') ? '&' : '?';
-          url = `${url}${separator}userId=${userIdToUse}`;
-        }
-      }
-
-      // For scripts, inject them directly
-      if (isScript) {
-        const scriptId = `integration-script-${integration._id || integration.contextualKey}`;
-        const existingScript = document.getElementById(scriptId);
-        if (existingScript) {
-          existingScript.remove();
-        }
-
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = url;
-        document.head.appendChild(script);
-      } else {
-        // For iframes, store the processed data
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = embedCode;
-        const iframe = wrapper.querySelector('iframe');
-        
-        processed.push({
-          integration,
-          iframeData: {
-            src: url,
-            title: iframe?.getAttribute('title') ?? null,
-            allow: iframe?.getAttribute('allow') ?? null,
-            loading: iframe?.getAttribute('loading') ?? null,
-            isScript: false,
-          },
-        });
-      }
-    });
-
-    setProcessedIntegrations(processed);
-
-    // Cleanup function to remove scripts when component unmounts
-    return () => {
-      integrations.forEach((integration: Integration) => {
-        const scriptId = `integration-script-${integration._id || integration.contextualKey}`;
-        const script = document.getElementById(scriptId);
-        if (script) {
-          script.remove();
-        }
-      });
-    };
-  }, [integrations, user, senderId]);
 
   return (
     <Container sx={{ py: 4, bgcolor: 'transparent' }}>
@@ -500,68 +359,6 @@ export default function SenderDashboardById() {
           </Paper>
         </Grid>
       </Grid>
-
-      {/* Integrations Section - Iframes and Scripts */}
-      {processedIntegrations.length > 0 && (
-        <Paper 
-          sx={{ 
-            p: 3,
-            mt: 3,
-            bgcolor: '#1F1F1F',
-            border: '1px solid rgba(201, 162, 39, 0.25)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
-            Integrations
-          </Typography>
-          <Grid container spacing={2}>
-            {processedIntegrations.map(({ integration, iframeData }) => {
-              if (!iframeData || iframeData.isScript) return null;
-
-              return (
-                <Grid item xs={12} key={integration._id || integration.contextualKey}>
-                  <Paper
-                    sx={{
-                      p: 2,
-                      bgcolor: '#252525',
-                      border: '1px solid rgba(201, 162, 39, 0.2)',
-                      borderRadius: 2
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                      {integration.name || integration.contextualKey}
-                    </Typography>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        minHeight: '400px',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        border: '1px solid rgba(201, 162, 39, 0.1)'
-                      }}
-                    >
-                      <iframe
-                        src={iframeData.src}
-                        title={iframeData.title || integration.name || integration.contextualKey}
-                        allow={iframeData.allow || undefined}
-                        loading={iframeData.loading as 'lazy' | 'eager' | undefined}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          minHeight: '400px',
-                          border: 'none',
-                          borderRadius: '8px'
-                        }}
-                      />
-                    </Box>
-                  </Paper>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </Paper>
-      )}
     </Container>
   );
 }

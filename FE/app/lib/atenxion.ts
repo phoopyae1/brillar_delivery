@@ -10,16 +10,16 @@ type UserWithOptionalRole = Omit<User, 'role'> & {
 // Types
 export interface AtenxionSenderCredentials {
   agentId?: string;
-  userId?: number;
-
+  userId?: string;
+  role?: string; // "SENDER", "DISPATCHER", "COURIER"
 }
 
 export interface AtenxionRequestBody {
   userId: string;
   senderId?: string;
   agentId?: string;
+  role?: string; // "SENDER", "DISPATCHER", "COURIER"
   Authorization?: string;
-  
 }
 
 function resolveServerUrl(): string {
@@ -88,6 +88,7 @@ function normalizeSenderCredentials(
     userId,
     senderId: userId, 
     agentId: agentId,
+    role: credentials.role, // Include role if provided
   };
   
   // Only set Authorization if we have a token
@@ -112,7 +113,7 @@ export async function loginAtenxionSender(
   useAdminIntegration: boolean = true
 ): Promise<boolean> {
   const baseUrl = resolveServerUrl();
-
+ console.log("nowlogin",credentials.role)
   // If no URL is configured, skip the Atenxion login
   if (!baseUrl) {
     console.warn("Atenxion sender login: NEXT_PUBLIC_ATENXION_API_URL is not configured, skipping Atenxion login");
@@ -161,10 +162,11 @@ export async function loginAtenxionSender(
     resolvedToken = embed?.contextualKey;
   }
 
-  // Prepare credentials with userId and extracted agentId
+  // Prepare credentials with userId, extracted agentId, and role
   const credentialsWithExtracted: AtenxionSenderCredentials = {
     agentId: agentId || credentials.agentId,
     userId: credentials.userId,
+    role: credentials.role, // Pass through role
   };
   const requestBody = normalizeSenderCredentials(credentialsWithExtracted, true);
 

@@ -1,9 +1,9 @@
 'use client';
 import useSWR from 'swr';
-import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { deliveryApi } from '../../lib/api';
+import { deliveryApi } from '../../../lib/api';
 import {
   Alert,
   Button,
@@ -20,9 +20,11 @@ import {
   MenuItem,
   Pagination
 } from '@mui/material';
-import { priorityLabels, statusLabels } from '../../lib/status';
+import { priorityLabels, statusLabels } from '../../../lib/status';
 
-export default function DispatcherDashboard() {
+export default function DispatcherDashboardById() {
+  const params = useParams();
+  const dispatcherIdFromUrl = params?.id as string;
   const { user, token, ready } = useAuth();
   const router = useRouter();
   const { data, error, mutate, isLoading } = useSWR(token ? '/dispatcher/all' : null, () => deliveryApi.adminAll(token!));
@@ -35,10 +37,6 @@ export default function DispatcherDashboard() {
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && !['DISPATCHER', 'ADMIN'].includes(user.role)) router.push('/');
-    // Redirect to /dashboard/dispatcher/{dispatcherid} route with dispatcher ID in URL
-    if (ready && user && user.id && (user.role === 'DISPATCHER' || user.role === 'ADMIN')) {
-      router.replace(`/dashboard/dispatcher/${user.id}`);
-    }
   }, [ready, user, token, router]);
 
   const handleAssign = async () => {
@@ -71,7 +69,7 @@ export default function DispatcherDashboard() {
   return (
     <Container sx={{ py: 4, bgcolor: 'transparent' }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-        Dispatcher Dashboard
+        Dispatcher Dashboard {dispatcherIdFromUrl && `(ID: ${dispatcherIdFromUrl})`}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error.message}</Alert>}
       {assignError && <Alert severity="error" sx={{ mb: 2 }}>{assignError}</Alert>}
@@ -178,6 +176,7 @@ export default function DispatcherDashboard() {
                   page={page}
                   onChange={(_, value) => {
                     setPage(value);
+                    setAssignment({ id: '', courierId: '' });
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   color="primary"
@@ -190,10 +189,16 @@ export default function DispatcherDashboard() {
                         '&:hover': {
                           bgcolor: 'primary.dark'
                         }
+                      },
+                      '&:hover': {
+                        bgcolor: 'rgba(201, 162, 39, 0.1)'
                       }
                     }
                   }}
                 />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  Showing {startIndex + 1}-{Math.min(endIndex, unassigned.length)} of {unassigned.length}
+                </Typography>
               </Stack>
             )}
           </Paper>
@@ -202,3 +207,4 @@ export default function DispatcherDashboard() {
     </Container>
   );
 }
+

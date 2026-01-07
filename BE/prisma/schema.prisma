@@ -37,7 +37,7 @@ enum Priority {
 }
 
 model User {
-  id         Int              @id @default(autoincrement())
+  id         String           @id @default(uuid())
   name       String
   email      String           @unique
   password   String
@@ -49,14 +49,14 @@ model User {
 }
 
 model Delivery {
-  id                 Int             @id @default(autoincrement())
+  id                 String            @id @default(uuid())
   trackingCode       String          @unique
   title              String
   description        String
   priority           Priority        @default(MEDIUM)
   status             DeliveryStatus  @default(CREATED)
   sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
-  senderId           Int
+  senderId           String
   receiverName       String
   receiverPhone      String
   destinationAddress String
@@ -67,23 +67,23 @@ model Delivery {
 }
 
 model Assignment {
-  id         Int      @id @default(autoincrement())
+  id         String    @id @default(uuid())
   delivery   Delivery @relation(fields: [deliveryId], references: [id])
-  deliveryId Int
+  deliveryId String
   courier    User     @relation("CourierAssignments", fields: [courierId], references: [id])
-  courierId  Int
+  courierId  String
   assignedAt DateTime @default(now())
 }
 
 model DeliveryEvent {
-  id           Int             @id @default(autoincrement())
+  id           String            @id @default(uuid())
   delivery     Delivery        @relation(fields: [deliveryId], references: [id])
-  deliveryId   Int
+  deliveryId   String
   type         DeliveryStatus
   note         String?
   locationText String?
   proofImageUrl String?        // Base64 encoded image or URL for delivery proof
   createdBy    User            @relation("UserEvents", fields: [createdById], references: [id])
-  createdById  Int
+  createdById  String
   createdAt    DateTime        @default(now())
 }

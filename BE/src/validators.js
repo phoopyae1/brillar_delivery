@@ -43,7 +43,7 @@ const statusUpdateSchema = z.object({
 });
 
 const assignSchema = z.object({
-  courierId: z.coerce.number().positive()
+  courierId: z.string().uuid()
 });
 
 const eventSchema = z.object({

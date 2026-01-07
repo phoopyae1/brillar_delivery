@@ -30,11 +30,10 @@ const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, user
   });
 
 const assertDeliveryAccess = async (user, deliveryId) => {
-  const id = Number(deliveryId);
-  if (!id || isNaN(id)) throw new AppError(400, 'Invalid delivery ID');
+  if (!deliveryId || typeof deliveryId !== 'string') throw new AppError(400, 'Invalid delivery ID');
   
   const delivery = await prisma.delivery.findUnique({
-    where: { id },
+    where: { id: deliveryId },
     include: { assignments: true }
   });
   if (!delivery) throw new AppError(404, 'Delivery not found');
@@ -117,7 +116,7 @@ router.get('/deliveries/:trackingCode/public', async (req, res) => {
 });
 
 router.get('/deliveries/:id', requireAuth, async (req, res) => {
-  const deliveryId = Number(req.params.id);
+  const deliveryId = req.params.id;
   await assertDeliveryAccess(req.user, deliveryId);
   const delivery = await prisma.delivery.findUnique({ where: { id: deliveryId }, include: includeDeliveryRelations });
   res.json(delivery);
@@ -165,7 +164,7 @@ router.patch(
   requireRoles('DISPATCHER', 'ADMIN'),
   validateBody(assignSchema),
   async (req, res) => {
-    const deliveryId = Number(req.params.id);
+    const deliveryId = req.params.id;
     const delivery = await prisma.delivery.findUnique({ where: { id: deliveryId } });
     if (!delivery) throw new AppError(404, 'Not found');
     if (!['CREATED', 'ASSIGNED'].includes(delivery.status)) {
@@ -186,7 +185,7 @@ router.patch(
   requireRoles('COURIER', 'DISPATCHER', 'ADMIN', 'SENDER'),
   validateBody(statusUpdateSchema),
   async (req, res) => {
-    const deliveryId = Number(req.params.id);
+    const deliveryId = req.params.id;
     const delivery = await assertDeliveryAccess(req.user, deliveryId);
     const nextStatus = req.body.status;
     if (!canTransition(delivery.status, nextStatus, req.user.role)) {
@@ -215,7 +214,7 @@ router.post(
   requireRoles('COURIER', 'DISPATCHER', 'ADMIN'),
   validateBody(eventSchema),
   async (req, res) => {
-    const deliveryId = Number(req.params.id);
+    const deliveryId = req.params.id;
     await assertDeliveryAccess(req.user, deliveryId);
     const event = await createEvent({
       deliveryId,
@@ -255,8 +254,8 @@ router.get('/stats', requireAuth, requireRoles('ADMIN'), async (_req, res) => {
 // Download PDF endpoint
 router.get('/deliveries/:id/pdf', requireAuth, async (req, res) => {
   try {
-    const deliveryId = Number(req.params.id);
-    if (!deliveryId || isNaN(deliveryId)) {
+    const deliveryId = req.params.id;
+    if (!deliveryId || typeof deliveryId !== 'string') {
       throw new AppError(400, 'Invalid delivery ID');
     }
     
