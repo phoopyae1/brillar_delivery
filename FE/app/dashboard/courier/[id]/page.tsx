@@ -1,9 +1,9 @@
 'use client';
 import useSWR from 'swr';
-import { useAuth } from '../../hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
+import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { deliveryApi } from '../../lib/api';
+import { deliveryApi } from '../../../lib/api';
 import {
   Alert,
   Button,
@@ -19,9 +19,14 @@ import {
   Divider,
   MenuItem,
   Pagination,
-  Chip
+  Chip,
+  Collapse,
+  IconButton
 } from '@mui/material';
-import { statusLabels } from '../../lib/status';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { statusLabels } from '../../../lib/status';
+import { DeliveryEvent } from '../../../lib/api';
 
 const courierStatuses = ['PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED_DELIVERY', 'RETURNED'];
 
@@ -39,25 +44,28 @@ const getValidStatuses = (currentStatus: string): string[] => {
   return ALLOWED_TRANSITIONS[currentStatus] || [];
 };
 
-export default function CourierDashboard() {
+export default function CourierDashboardById() {
+  const params = useParams();
+  const courierIdFromUrl = params?.id as string;
   const { user, token, ready } = useAuth();
   const router = useRouter();
   const { data, error, mutate, isLoading } = useSWR(token ? '/courier/mine' : null, () => deliveryApi.mine(token!));
   const [updateForm, setUpdateForm] = useState({ id: '', status: courierStatuses[0], note: '', locationText: '' });
   const [formError, setFormError] = useState('');
   const [selectedDelivery, setSelectedDelivery] = useState<any>(null);
+  const [expandedDelivery, setExpandedDelivery] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
   const [proofImage, setProofImage] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
 
+  const toggleExpand = (deliveryId: string) => {
+    setExpandedDelivery(expandedDelivery === deliveryId ? null : deliveryId);
+  };
+
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && !['COURIER', 'ADMIN', 'DISPATCHER'].includes(user.role)) router.push('/');
-    // Redirect to /dashboard/courier/{courierid} route with courier ID in URL
-    if (ready && user && user.id && (user.role === 'COURIER' || user.role === 'ADMIN' || user.role === 'DISPATCHER')) {
-      router.replace(`/dashboard/courier/${user.id}`);
-    }
   }, [ready, user, token, router]);
 
   const convertImageToBase64 = (file: File): Promise<string> => {
@@ -170,7 +178,7 @@ export default function CourierDashboard() {
   return (
     <Container sx={{ py: 4, bgcolor: 'transparent' }}>
       <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, mb: 3 }}>
-        Courier Dashboard
+        Courier Dashboard {courierIdFromUrl && `(ID: ${courierIdFromUrl})`}
       </Typography>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error.message}</Alert>}
       {formError && <Alert severity="error" sx={{ mb: 2 }}>{formError}</Alert>}
@@ -339,83 +347,173 @@ export default function CourierDashboard() {
             </Stack>
             {isLoading && <Typography>Loading...</Typography>}
             {!isLoading && data?.length === 0 && <Typography>No assigned deliveries.</Typography>}
-            <List>
-              {paginatedData.map((d: any, index: number) => (
-                <>
-                  <ListItem 
-                    key={d.id} 
-                    alignItems="flex-start"
-                    onClick={() => {
-                      setSelectedDelivery(d);
-                      const validStatuses = getValidStatuses(d.status);
-                      const newStatus = validStatuses.length > 0 ? validStatuses[0] : updateForm.status;
-                      setUpdateForm({ 
-                        ...updateForm, 
-                        id: String(d.id),
-                        status: newStatus
-                      });
-                      // Clear proof image if new status is not DELIVERED
-                      if (newStatus !== 'DELIVERED') {
-                        setProofImage(null);
-                        setProofPreview(null);
-                      }
-                    }}
+            <Stack spacing={2}>
+              {paginatedData.map((d: any, index: number) => {
+                const isExpanded = expandedDelivery === d.id;
+                const events = d.events || [];
+                
+                return (
+                  <Paper
+                    key={d.id}
                     sx={{
-                      bgcolor: index % 2 === 0 ? 'transparent' : 'rgba(201, 162, 39, 0.05)',
-                      borderRadius: 1,
-                      mb: 0.5,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: 'rgba(201, 162, 39, 0.1)',
-                        transform: 'translateX(4px)'
-                      }
+                      bgcolor: index % 2 === 0 ? '#1F1F1F' : '#252525',
+                      border: '1px solid rgba(201, 162, 39, 0.2)',
+                      borderRadius: 2,
+                      overflow: 'hidden'
                     }}
                   >
-                    <ListItemText
-                      primary={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                            {d.title}
+                    <ListItem 
+                      onClick={() => {
+                        toggleExpand(d.id);
+                        setSelectedDelivery(d);
+                        const validStatuses = getValidStatuses(d.status);
+                        const newStatus = validStatuses.length > 0 ? validStatuses[0] : updateForm.status;
+                        setUpdateForm({ 
+                          ...updateForm, 
+                          id: String(d.id),
+                          status: newStatus
+                        });
+                        // Clear proof image if new status is not DELIVERED
+                        if (newStatus !== 'DELIVERED') {
+                          setProofImage(null);
+                          setProofPreview(null);
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: 'rgba(201, 162, 39, 0.05)'
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                              {d.title}
+                            </Typography>
+                            <Chip 
+                              label={d.trackingCode} 
+                              size="small" 
+                              sx={{ 
+                                bgcolor: 'rgba(201, 162, 39, 0.2)',
+                                color: 'primary.main',
+                                fontWeight: 600
+                              }} 
+                            />
+                          </Stack>
+                        }
+                        secondary={
+                          <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap">
+                            <Typography variant="body2" component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              ID: {d.id}
+                            </Typography>
+                            <Typography variant="body2" component="span">•</Typography>
+                            <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
+                              {statusLabels[d.status] || d.status}
+                            </Typography>
+                            <Typography variant="body2" component="span">•</Typography>
+                            <Typography variant="body2" component="span">
+                              {getValidStatuses(d.status).length > 0 
+                                ? `Can update to: ${getValidStatuses(d.status).map(s => statusLabels[s] || s).join(', ')}`
+                                : 'No valid transitions'}
+                            </Typography>
+                            <Typography variant="body2" component="span">•</Typography>
+                            <Typography variant="body2" component="span">
+                              {d.destinationAddress}
+                            </Typography>
+                          </Stack>
+                        }
+                      />
+                      <IconButton size="small">
+                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      </IconButton>
+                    </ListItem>
+                    
+                    <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                      <Divider sx={{ borderColor: 'rgba(201, 162, 39, 0.15)' }} />
+                      <Stack spacing={1.5} sx={{ p: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                          Delivery Route
+                        </Typography>
+                        {events.length > 0 ? (
+                          events.map((event: DeliveryEvent, eventIndex: number) => (
+                            <Stack
+                              key={event.id}
+                              direction="row"
+                              spacing={2}
+                              sx={{
+                                py: 1.5,
+                                px: 2,
+                                borderLeft: '2px solid',
+                                borderColor: eventIndex === events.length - 1 ? 'primary.main' : 'rgba(201, 162, 39, 0.3)',
+                                bgcolor: eventIndex % 2 === 0 ? 'transparent' : 'rgba(201, 162, 39, 0.03)',
+                                borderRadius: 1
+                              }}
+                            >
+                              <Stack spacing={0.5} sx={{ flex: 1 }}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {statusLabels[event.type] || event.type}
+                                  </Typography>
+                                  {event.locationText && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      • {event.locationText}
+                                    </Typography>
+                                  )}
+                                </Stack>
+                                {event.note && event.note !== '-' && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    {event.note}
+                                  </Typography>
+                                )}
+                                {event.proofImageUrl && event.type === 'DELIVERED' && (
+                                  <Stack spacing={1} sx={{ mt: 1 }}>
+                                    <Typography variant="caption" color="primary.main" sx={{ fontWeight: 600 }}>
+                                      Delivery Proof:
+                                    </Typography>
+                                    <img
+                                      src={event.proofImageUrl}
+                                      alt="Delivery proof"
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '300px',
+                                        objectFit: 'contain',
+                                        borderRadius: '8px',
+                                        border: '1px solid rgba(201, 162, 39, 0.3)',
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={() => window.open(event.proofImageUrl!, '_blank')}
+                                    />
+                                  </Stack>
+                                )}
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                  <Typography variant="caption" color="text.secondary">
+                                    {new Date(event.createdAt).toLocaleString()}
+                                  </Typography>
+                                  {event.createdBy && (
+                                    <>
+                                      <Typography variant="caption" color="text.secondary">•</Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {event.createdBy.name} ({event.createdBy.role})
+                                      </Typography>
+                                    </>
+                                  )}
+                                </Stack>
+                              </Stack>
+                            </Stack>
+                          ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                            No events yet
                           </Typography>
-                          <Chip 
-                            label={d.trackingCode} 
-                            size="small" 
-                            sx={{ 
-                              bgcolor: 'rgba(201, 162, 39, 0.2)',
-                              color: 'primary.main',
-                              fontWeight: 600
-                            }} 
-                          />
-                        </Stack>
-                      }
-                      secondary={
-                        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }} flexWrap="wrap">
-                          <Typography variant="body2" component="span" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            ID: {d.id}
-                          </Typography>
-                          <Typography variant="body2" component="span">•</Typography>
-                          <Typography variant="body2" component="span" sx={{ fontWeight: 600 }}>
-                            {statusLabels[d.status] || d.status}
-                          </Typography>
-                          <Typography variant="body2" component="span">•</Typography>
-                          <Typography variant="body2" component="span">
-                            {getValidStatuses(d.status).length > 0 
-                              ? `Can update to: ${getValidStatuses(d.status).map(s => statusLabels[s] || s).join(', ')}`
-                              : 'No valid transitions'}
-                          </Typography>
-                          <Typography variant="body2" component="span">•</Typography>
-                          <Typography variant="body2" component="span">
-                            {d.destinationAddress}
-                          </Typography>
-                        </Stack>
-                      }
-                    />
-                  </ListItem>
-                  <Divider sx={{ borderColor: 'rgba(201, 162, 39, 0.15)' }} />
-                </>
-              ))}
-            </List>
+                        )}
+                      </Stack>
+                    </Collapse>
+                  </Paper>
+                );
+              })}
+            </Stack>
             {totalPages > 1 && (
               <Stack alignItems="center" sx={{ mt: 3 }}>
                 <Pagination
@@ -423,7 +521,8 @@ export default function CourierDashboard() {
                   page={page}
                   onChange={(_, value) => {
                     setPage(value);
-                    setSelectedDelivery(null); // Clear selected delivery when changing page
+                    setSelectedDelivery(null);
+                    setExpandedDelivery(null);
                     setProofImage(null);
                     setProofPreview(null);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -450,3 +549,4 @@ export default function CourierDashboard() {
     </Container>
   );
 }
+

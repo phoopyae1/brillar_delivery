@@ -43,7 +43,7 @@ const statusUpdateSchema = z.object({
 });
 
 const assignSchema = z.object({
-  courierId: z.coerce.number().positive()
+  courierId: z.string().uuid('Invalid courier ID format')
 });
 
 const eventSchema = z.object({
@@ -55,7 +55,16 @@ const eventSchema = z.object({
 const integrationSchema = z.object({
   name: z.string().optional(),
   contextualKey: z.string().min(1, 'Contextual key is required'),
-  iframeScriptTag: z.string().min(1, 'Iframe/Script tag is required')
+  iframeScriptTag: z.string().min(1, 'Iframe/Script tag is required'),
+  role: z.enum(['SENDER', 'DISPATCHER', 'COURIER']).optional()
+});
+
+const trackingCodeSchema = z.object({
+  trackingCode: z.string().min(1, 'Tracking code is required')
+});
+
+const senderIdSchema = z.object({
+  senderId: z.string().uuid('Invalid sender ID format')
 });
 
 module.exports = {
@@ -65,5 +74,7 @@ module.exports = {
   statusUpdateSchema,
   assignSchema,
   eventSchema,
-  integrationSchema
+  integrationSchema,
+  trackingCodeSchema,
+  senderIdSchema
 };

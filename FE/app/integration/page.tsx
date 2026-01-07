@@ -8,14 +8,16 @@ import {
   Stack,
   TextField,
   Typography,
-  Box
+  Box,
+  MenuItem
 } from '@mui/material';
 import { integrationApi } from '../lib/api';
 
 export default function IntegrationPage() {
   const [form, setForm] = useState({
     contextualKey: '',
-    iframeScriptTag: ''
+    iframeScriptTag: '',
+    role: '' as 'SENDER' | 'DISPATCHER' | 'COURIER' | ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -41,18 +43,49 @@ export default function IntegrationPage() {
         return;
       }
 
-      const dataToSave = {
+      const dataToSave: {
+        contextualKey: string;
+        iframeScriptTag: string;
+        role?: 'SENDER' | 'DISPATCHER' | 'COURIER';
+      } = {
         contextualKey: form.contextualKey.trim(),
         iframeScriptTag: form.iframeScriptTag.trim()
       };
-
-      await integrationApi.create(dataToSave);
       
-      setSuccess('Integration saved successfully!');
-      // Reset form
+      if (form.role) {
+        dataToSave.role = form.role;
+      }
+
+      try {
+        // Try to create first
+        await integrationApi.create(dataToSave);
+        setSuccess('Integration created successfully!');
+      } catch (createErr: any) {
+        // If it already exists, try to update it
+        if (createErr.message?.includes('already exists')) {
+          try {
+            // Fetch existing integration by key
+            const existing = await integrationApi.getByKey(form.contextualKey.trim());
+            if (existing && existing._id) {
+              // Update the existing integration
+              await integrationApi.update(existing._id, dataToSave);
+              setSuccess('Integration updated successfully!');
+            } else {
+              throw new Error('Integration exists but could not be retrieved');
+            }
+          } catch (updateErr: any) {
+            setError(updateErr.message || 'Failed to update existing integration');
+          }
+        } else {
+          throw createErr;
+        }
+      }
+      
+      // Reset form after successful save/update
       setForm({
         contextualKey: '',
-        iframeScriptTag: ''
+        iframeScriptTag: '',
+        role: ''
       });
     } catch (err: any) {
       setError(err.message || 'Failed to save integration');
@@ -142,6 +175,39 @@ export default function IntegrationPage() {
                 }
               }}
             />
+
+            <TextField
+              select
+              label="Role (Optional)"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as 'SENDER' | 'DISPATCHER' | 'COURIER' | '' })}
+              fullWidth
+              helperText="Select the role this integration is for (optional)"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: 'text.primary',
+                  '& fieldset': {
+                    borderColor: 'rgba(201, 162, 39, 0.3)'
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(201, 162, 39, 0.5)'
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'text.secondary'
+                }
+              }}
+            >
+              <MenuItem value="">
+                <em>None (All Roles)</em>
+              </MenuItem>
+              <MenuItem value="SENDER">Sender</MenuItem>
+              <MenuItem value="DISPATCHER">Dispatcher</MenuItem>
+              <MenuItem value="COURIER">Courier</MenuItem>
+            </TextField>
 
             <Box sx={{ pt: 2 }}>
               <Button

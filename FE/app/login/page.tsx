@@ -59,14 +59,11 @@ export default function LoginPage() {
       
       if (userIdToUse) {
         try {
-          // Fetch contextKey from MongoDB integration
+          // Fetch contextKey from MongoDB integration filtered by user role
           let contextKey: string | null = null;
           try {
-            const allIntegrations = await integrationApi.getAll();
-            const embed = allIntegrations.find((int) => 
-              int.iframeScriptTag?.includes('atenxion') || 
-              int.iframeScriptTag?.includes('widget')
-            ) || allIntegrations[0] || null;
+            const role = data.user?.role;
+            const embed = await fetchSenderIntegrationEmbed(role);
             contextKey = embed?.contextualKey || null;
             console.log('[Login] Fetched contextKey from MongoDB:', contextKey ? contextKey.substring(0, 50) + '...' : 'none');
           } catch (integrationError) {
@@ -89,10 +86,10 @@ export default function LoginPage() {
       
       // Route based on role if available, otherwise default to sender dashboard with ID
       const role = data.user?.role;
-      if (role === 'DISPATCHER') {
-        router.push('/dashboard/dispatcher');
-      } else if (role === 'COURIER') {
-        router.push('/dashboard/courier');
+      if (role === 'DISPATCHER' && data.user?.id) {
+        router.push(`/dashboard/dispatcher/${data.user.id}`);
+      } else if (role === 'COURIER' && data.user?.id) {
+        router.push(`/dashboard/courier/${data.user.id}`);
       } else if (role === 'ADMIN') {
         router.push('/admin');
       } else if (data.user?.id) {

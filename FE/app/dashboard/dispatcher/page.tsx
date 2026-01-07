@@ -35,13 +35,17 @@ export default function DispatcherDashboard() {
   useEffect(() => {
     if (ready && (!user || !token)) router.push('/login');
     if (ready && user && !['DISPATCHER', 'ADMIN'].includes(user.role)) router.push('/');
+    // Redirect to /dashboard/dispatcher/{dispatcherid} route with dispatcher ID in URL
+    if (ready && user && user.id && (user.role === 'DISPATCHER' || user.role === 'ADMIN')) {
+      router.replace(`/dashboard/dispatcher/${user.id}`);
+    }
   }, [ready, user, token, router]);
 
   const handleAssign = async () => {
     if (!token) return;
     setAssignError('');
     try {
-      await deliveryApi.assign(token, Number(assignment.id), Number(assignment.courierId));
+      await deliveryApi.assign(token, assignment.id, assignment.courierId);
       setAssignment({ id: '', courierId: '' });
       await mutate();
     } catch (e: any) {
@@ -88,8 +92,6 @@ export default function DispatcherDashboard() {
                 value={assignment.id} 
                 onChange={(e) => setAssignment({ ...assignment, id: e.target.value })} 
                 fullWidth
-                type="number"
-                helperText={data?.length ? `Available IDs: ${data.map((d: any) => d.id).join(', ')}` : 'Enter a delivery ID'}
               />
               <TextField
                 select
@@ -138,7 +140,7 @@ export default function DispatcherDashboard() {
                   <ListItem 
                     key={d.id} 
                     alignItems="flex-start"
-                    onClick={() => setAssignment({ ...assignment, id: String(d.id) })}
+                    onClick={() => setAssignment({ ...assignment, id: d.id })}
                     sx={{
                       bgcolor: index % 2 === 0 ? 'transparent' : 'rgba(201, 162, 39, 0.05)',
                       borderRadius: 1,

@@ -58,14 +58,14 @@ export const deliveryApi = {
   adminAll: (token: string) => apiFetch('/deliveries', { method: 'GET' }, token),
   adminStats: (token: string) => apiFetch('/stats', { method: 'GET' }, token),
   getCouriers: (token: string) => apiFetch('/couriers', { method: 'GET' }, token),
-  assign: (token: string, id: number, courierId: number) =>
+  assign: (token: string, id: string, courierId: string) =>
     apiFetch(`/deliveries/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ courierId }) }, token),
-  updateStatus: (token: string, id: number, payload: { status: string; note?: string; locationText?: string; proofImageUrl?: string }) =>
+  updateStatus: (token: string, id: string, payload: { status: string; note?: string; locationText?: string; proofImageUrl?: string }) =>
     apiFetch(`/deliveries/${id}/status`, { method: 'PATCH', body: JSON.stringify(payload) }, token),
-  addEvent: (token: string, id: number, payload: { type: string; note?: string; locationText?: string }) =>
+  addEvent: (token: string, id: string, payload: { type: string; note?: string; locationText?: string }) =>
     apiFetch(`/deliveries/${id}/events`, { method: 'POST', body: JSON.stringify(payload) }, token),
   publicTrack: (trackingCode: string) => apiFetch(`/deliveries/${trackingCode}/public`),
-  downloadPDF: async (token: string, id: number) => {
+  downloadPDF: async (token: string, id: string) => {
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     try {
       const res = await fetch(`${API_URL}/deliveries/${id}/pdf`, {
@@ -98,6 +98,7 @@ export const deliveryApi = {
 
 export type Integration = {
   _id?: string;
+  role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | null;
   name: string;
   contextualKey: string;
   iframeScriptTag: string;
@@ -109,9 +110,9 @@ export const integrationApi = {
   getAll: () => apiFetch('/integration', { method: 'GET' }),
   getById: (id: string) => apiFetch(`/integration/${id}`, { method: 'GET' }),
   getByKey: (key: string) => apiFetch(`/integration/key/${key}`, { method: 'GET' }),
-  create: (data: { contextualKey: string; iframeScriptTag: string; name?: string }) =>
+  create: (data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' }) =>
     apiFetch('/integration', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string }) =>
+  update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' }) =>
     apiFetch(`/integration/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => apiFetch(`/integration/${id}`, { method: 'DELETE' })
 };

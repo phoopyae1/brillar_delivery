@@ -11,6 +11,12 @@ const integrationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ['SENDER', 'DISPATCHER', 'COURIER'],
+    required: false,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

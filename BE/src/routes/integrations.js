@@ -38,7 +38,7 @@ router.post('/integration', validateBody(integrationSchema), async (req, res) =>
     throw new AppError(503, 'Database connection not available. Please try again later.');
   }
   
-  const { name, contextualKey, iframeScriptTag } = req.body;
+  const { name, contextualKey, iframeScriptTag, role } = req.body;
   
   // Ensure name is set (use contextualKey if not provided or empty)
   const integrationName = (name && name.trim()) ? name.trim() : contextualKey.trim();
@@ -52,7 +52,8 @@ router.post('/integration', validateBody(integrationSchema), async (req, res) =>
   const integration = new Integration({
     name: integrationName,
     contextualKey: contextualKey.trim(),
-    iframeScriptTag: iframeScriptTag.trim()
+    iframeScriptTag: iframeScriptTag.trim(),
+    role: role || null
   });
   
   const saved = await integration.save();
@@ -61,7 +62,7 @@ router.post('/integration', validateBody(integrationSchema), async (req, res) =>
 
 // PUT /integration/:id - Update integration
 router.put('/integration/:id', validateBody(integrationSchema), async (req, res) => {
-  const { name, contextualKey, iframeScriptTag } = req.body;
+  const { name, contextualKey, iframeScriptTag, role } = req.body;
   
   // Check if contextual key is being changed and if it conflicts
   const existing = await Integration.findById(req.params.id);
@@ -82,6 +83,7 @@ router.put('/integration/:id', validateBody(integrationSchema), async (req, res)
       name: name || contextualKey, // Use contextualKey as name if not provided
       contextualKey,
       iframeScriptTag,
+      role: role || null,
       updatedAt: Date.now()
     },
     { new: true, runValidators: true }

@@ -7,6 +7,8 @@ const { connectMongoDB } = require('./mongodb');
 const authRoutes = require('./routes/auth');
 const deliveryRoutes = require('./routes/deliveries');
 const integrationRoutes = require('./routes/integrations');
+const senderAgentRoutes = require('./routes/senderagent');
+const publicAgentRoutes = require('./routes/publicagent');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -30,6 +32,8 @@ connectMongoDB().catch(err => {
 app.use('/auth', authRoutes);
 app.use('/', deliveryRoutes);
 app.use('/', integrationRoutes);
+app.use('/', senderAgentRoutes);
+app.use('/', publicAgentRoutes);
 
 app.use(errorHandler);
 
