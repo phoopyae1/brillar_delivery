@@ -112,6 +112,9 @@ async function generateDeliveryPDF(delivery, sender) {
   
   yPos += 20;
   doc.text(`Email: ${sender.email}`, 50, yPos);
+  
+  yPos += 20;
+  doc.text(`Phone: ${sender.phone || 'Not provided'}`, 50, yPos);
 
   // Footer
   const pageHeight = doc.page.height;

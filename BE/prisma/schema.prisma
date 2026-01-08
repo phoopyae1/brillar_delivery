@@ -37,53 +37,54 @@ enum Priority {
 }
 
 model User {
-  id         Int              @id @default(autoincrement())
-  name       String
-  email      String           @unique
-  password   String
-  role       Role
-  deliveries Delivery[]       @relation("SenderDeliveries")
+  id          String          @id @default(uuid())
+  name        String
+  email       String          @unique
+  password    String
+  phone       String?         // Phone number for sender registration
+  role        Role
+  createdAt   DateTime        @default(now())
   assignments Assignment[]    @relation("CourierAssignments")
-  events     DeliveryEvent[]  @relation("UserEvents")
-  createdAt  DateTime         @default(now())
+  deliveries  Delivery[]      @relation("SenderDeliveries")
+  events      DeliveryEvent[] @relation("UserEvents")
 }
 
 model Delivery {
-  id                 Int             @id @default(autoincrement())
+  id                 String          @id @default(uuid())
   trackingCode       String          @unique
   title              String
   description        String
   priority           Priority        @default(MEDIUM)
   status             DeliveryStatus  @default(CREATED)
-  sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
-  senderId           Int
+  senderId           String
   receiverName       String
   receiverPhone      String
   destinationAddress String
+  createdAt          DateTime        @default(now())
   pdfUrl             String?         // PDF file name for delivery label
   assignments        Assignment[]
+  sender             User            @relation("SenderDeliveries", fields: [senderId], references: [id])
   events             DeliveryEvent[]
-  createdAt          DateTime        @default(now())
 }
 
 model Assignment {
-  id         Int      @id @default(autoincrement())
-  delivery   Delivery @relation(fields: [deliveryId], references: [id])
-  deliveryId Int
-  courier    User     @relation("CourierAssignments", fields: [courierId], references: [id])
-  courierId  Int
+  id         String   @id @default(uuid())
+  deliveryId String
+  courierId  String
   assignedAt DateTime @default(now())
+  courier    User     @relation("CourierAssignments", fields: [courierId], references: [id])
+  delivery   Delivery @relation(fields: [deliveryId], references: [id])
 }
 
 model DeliveryEvent {
-  id           Int             @id @default(autoincrement())
-  delivery     Delivery        @relation(fields: [deliveryId], references: [id])
-  deliveryId   Int
-  type         DeliveryStatus
-  note         String?
-  locationText String?
+  id            String         @id @default(uuid())
+  deliveryId    String
+  type          DeliveryStatus
+  note          String?
+  locationText  String?
+  createdById   String
+  createdAt     DateTime       @default(now())
   proofImageUrl String?        // Base64 encoded image or URL for delivery proof
-  createdBy    User            @relation("UserEvents", fields: [createdById], references: [id])
-  createdById  Int
-  createdAt    DateTime        @default(now())
+  createdBy     User           @relation("UserEvents", fields: [createdById], references: [id])
+  delivery      Delivery       @relation(fields: [deliveryId], references: [id])
 }

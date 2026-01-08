@@ -18,7 +18,8 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: roleEnum
+  role: roleEnum,
+  phone: z.string().min(5).optional() // Phone number (optional, but recommended for senders)
 });
 
 const loginSchema = z.object({

@@ -2,6 +2,7 @@ export type User = {
   id: number;
   name: string;
   email: string;
+  phone?: string | null;
   role: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN';
 };
 
@@ -18,6 +19,13 @@ export type Delivery = {
   destinationAddress: string;
   pdfUrl?: string | null;
   createdAt: string;
+  sender?: {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role: string;
+  };
 };
 
 export type DeliveryEvent = {
@@ -27,7 +35,7 @@ export type DeliveryEvent = {
   locationText?: string | null;
   proofImageUrl?: string | null;
   createdAt: string;
-  createdBy?: { name: string; role: string };
+  createdBy?: { name: string; phone?: string | null; role: string };
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -48,7 +56,7 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
 
 export const authApi = {
   login: (data: { email: string; password: string }) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-  register: (data: { name: string; email: string; password: string; role: User['role'] }) =>
+  register: (data: { name: string; email: string; password: string; role: User['role']; phone?: string }) =>
     apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   logout: (token: string) => apiFetch('/auth/logout', { method: 'POST' }, token)
 };

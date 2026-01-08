@@ -465,6 +465,24 @@ export default function SenderDashboardById() {
                             No events yet
                           </Typography>
                         )}
+                        {/* Delivery Details */}
+                        <Divider sx={{ my: 2, borderColor: 'rgba(201, 162, 39, 0.15)' }} />
+                        <Stack spacing={1.5}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                            Delivery Information
+                          </Typography>
+                          <Stack spacing={1}>
+                            <Typography variant="body2">
+                              <strong>Receiver:</strong> {d.receiverName}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Receiver Phone:</strong> {d.receiverPhone}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Destination:</strong> {d.destinationAddress}
+                            </Typography>
+                          </Stack>
+                        </Stack>
                       </Stack>
                     </Collapse>
                   </Paper>

@@ -24,6 +24,7 @@ router.post('/public/agent/deliveries/trackingCode', validateBody(trackingCodeSc
       receiverPhone: true,
       pdfUrl: true,
       createdAt: true,
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       events: {
         orderBy: { createdAt: 'asc' },
         select: {
@@ -33,7 +34,7 @@ router.post('/public/agent/deliveries/trackingCode', validateBody(trackingCodeSc
           proofImageUrl: true,
           locationText: true,
           createdAt: true,
-          createdBy: { select: { name: true, role: true } }
+          createdBy: { select: { name: true, phone: true, role: true } }
         }
       }
     }

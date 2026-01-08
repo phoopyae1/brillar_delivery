@@ -79,42 +79,112 @@ export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER'
 // Normalize sender credentials (following the pattern from normalizeCredentials)
 function normalizeSenderCredentials(
   credentials: AtenxionSenderCredentials,
-  userToken: boolean = false
+  authToken?: string | null
 ): AtenxionRequestBody {
   const userId = credentials.userId ? String(credentials.userId).trim() : '';
   const agentId = credentials.agentId?.trim();
   
-  let authToken = "";
+  let resolvedAuthToken = authToken || "";
   
-  if (userToken) {
-    // Use user token for senders (if available)
-    const userToken = typeof window !== 'undefined' ? localStorage.getItem("sender_session") : null;
-    if (userToken) {
-      authToken = userToken;
-    }
-  } else {
-    // Use sender token from localStorage (if available)
+  // If no token provided, try to get from localStorage
+  if (!resolvedAuthToken) {
+    // Use sender session token from localStorage (if available)
     const stored = typeof window !== 'undefined' ? localStorage.getItem("sender_session") : null;
     if (stored) {
       try {
-        authToken = JSON.parse(stored).token;
+        resolvedAuthToken = JSON.parse(stored).token;
       } catch (e) {
         // If not JSON, use as-is
-        authToken = stored;
+        resolvedAuthToken = stored;
       }
     }
   }
   
   const body: AtenxionRequestBody = {
     userId,
-    senderId: userId, 
-    agentId: agentId,
+    senderId: userId,
     role: credentials.role,
+    Authorization: `Bearer ${resolvedAuthToken}`,
   };
   
-  // Only set Authorization if we have a token
-  if (authToken) {
-    body.Authorization = authToken;
+  if (agentId) {
+    body.agentId = agentId;
+  }
+  console.log('body', body);
+  return body;
+}
+
+// Normalize courier credentials (following the pattern from normalizeCredentials)
+function normalizeCourierCredentials(
+  credentials: AtenxionSenderCredentials,
+  authToken?: string | null
+): AtenxionRequestBody {
+  const userId = credentials.userId ? String(credentials.userId).trim() : '';
+  const agentId = credentials.agentId?.trim();
+  
+  let resolvedAuthToken = authToken || "";
+  
+  // If no token provided, try to get from localStorage
+  if (!resolvedAuthToken) {
+    // Use courier session token from localStorage (if available)
+    const stored = typeof window !== 'undefined' ? localStorage.getItem("courier_session") : null;
+    if (stored) {
+      try {
+        resolvedAuthToken = JSON.parse(stored).token;
+      } catch (e) {
+        // If not JSON, use as-is
+        resolvedAuthToken = stored;
+      }
+    }
+  }
+  
+  const body: AtenxionRequestBody = {
+    userId,
+    senderId: userId,
+    role: credentials.role,
+    Authorization: `Bearer ${resolvedAuthToken}`,
+  };
+  
+  if (agentId) {
+    body.agentId = agentId;
+  }
+  
+  return body;
+}
+
+// Normalize dispatcher credentials (following the pattern from normalizeCredentials)
+function normalizeDispatcherCredentials(
+  credentials: AtenxionSenderCredentials,
+  authToken?: string | null
+): AtenxionRequestBody {
+  const userId = credentials.userId ? String(credentials.userId).trim() : '';
+  const agentId = credentials.agentId?.trim();
+  
+  let resolvedAuthToken = authToken || "";
+  
+  // If no token provided, try to get from localStorage
+  if (!resolvedAuthToken) {
+    // Use dispatcher session token from localStorage (if available)
+    const stored = typeof window !== 'undefined' ? localStorage.getItem("dispatcher_session") : null;
+    if (stored) {
+      try {
+        resolvedAuthToken = JSON.parse(stored).token;
+      } catch (e) {
+        // If not JSON, use as-is
+        resolvedAuthToken = stored;
+      }
+    }
+  }
+  
+  const body: AtenxionRequestBody = {
+    userId,
+    senderId: userId,
+    role: credentials.role,
+    Authorization: `Bearer ${resolvedAuthToken}`,
+  };
+  
+  if (agentId) {
+    body.agentId = agentId;
   }
   
   return body;
@@ -192,13 +262,10 @@ export async function loginAtenxionSender(
     userId: credentials.userId,
     role: role,
   };
-  const requestBody = normalizeSenderCredentials(credentialsWithExtracted, true);
-
-  // If we have resolvedToken (contextKey from MongoDB), use it as Authorization in body
-  // The contextKey from MongoDB is the token we need to send
-  if (resolvedToken) {
-    requestBody.Authorization = resolvedToken; // Use contextKey directly as token
-  }
+  
+  // Normalize credentials and include Authorization in body
+  // Use resolvedToken (contextKey from MongoDB) as Authorization token
+  const requestBody = normalizeSenderCredentials(credentialsWithExtracted, resolvedToken);
 
   const headers = getHeaders(resolvedToken); // Headers only for Content-Type, Authorization goes in body
 
@@ -242,17 +309,12 @@ export async function loginAtenxionCourier(
   console.log("Atenxion courier login URL:", url);
 
   let resolvedToken = token;
-
-  // Use COURIER role
   const userRole = 'COURIER';
   
   if (!resolvedToken) {
-    // Use integration filtered by role
     const embed = useAdminIntegration
       ? await fetchSenderIntegrationEmbed(userRole)
       : null;
-    
-    // Use contextualKey as contextKey (they're the same in our MongoDB schema)
     resolvedToken = embed?.contextualKey;
   }
 
@@ -269,7 +331,6 @@ export async function loginAtenxionCourier(
     if (embed?.iframeScriptTag) {
       console.log('[loginAtenxionCourier] Extracting agentId from embed...');
       
-      // Extract agentchainId using the provided pattern
       const agentIdMatch = embed.iframeScriptTag.match(/agentchainId=([^&"']+)/);
       agentId = agentIdMatch ? agentIdMatch[1] : undefined;
       
@@ -279,24 +340,19 @@ export async function loginAtenxionCourier(
         console.log('[loginAtenxionCourier] No agentchainId found in embed');
       }
     }
-    resolvedToken = embed?.contextualKey;
+    if (!resolvedToken) {
+      resolvedToken = embed?.contextualKey;
+    }
   }
 
-  // Prepare credentials with userId and extracted agentId
   const credentialsWithExtracted: AtenxionSenderCredentials = {
     agentId: agentId || credentials.agentId,
     userId: credentials.userId,
     role: userRole,
   };
-  const requestBody = normalizeSenderCredentials(credentialsWithExtracted, true);
-
-  // If we have resolvedToken (contextKey from MongoDB), use it as Authorization in body
-  // The contextKey from MongoDB is the token we need to send
-  if (resolvedToken) {
-    requestBody.Authorization = resolvedToken; // Use contextKey directly as token
-  }
-
-  const headers = getHeaders(resolvedToken); // Headers only for Content-Type, Authorization goes in body
+  
+  const requestBody = normalizeCourierCredentials(credentialsWithExtracted, resolvedToken);
+  const headers = getHeaders(resolvedToken);
 
   console.log("Atenxion courier login API call:", {
     url,  
@@ -307,8 +363,8 @@ export async function loginAtenxionCourier(
   });
 
   try {
-    const pp = await axios.post(url, requestBody, { headers });
-    console.log("Atenxion courier login response:", pp);
+    const response = await axios.post(url, requestBody, { headers });
+    console.log("Atenxion courier login response:", response);
     return true;
   } catch (error) {
     console.error("Atenxion courier login failed:", error);
@@ -338,17 +394,12 @@ export async function loginAtenxionDispatcher(
   console.log("Atenxion dispatcher login URL:", url);
 
   let resolvedToken = token;
-
-  // Use DISPATCHER role
   const userRole = 'DISPATCHER';
   
   if (!resolvedToken) {
-    // Use integration filtered by role
     const embed = useAdminIntegration
       ? await fetchSenderIntegrationEmbed(userRole)
       : null;
-    
-    // Use contextualKey as contextKey (they're the same in our MongoDB schema)
     resolvedToken = embed?.contextualKey;
   }
 
@@ -365,7 +416,6 @@ export async function loginAtenxionDispatcher(
     if (embed?.iframeScriptTag) {
       console.log('[loginAtenxionDispatcher] Extracting agentId from embed...');
       
-      // Extract agentchainId using the provided pattern
       const agentIdMatch = embed.iframeScriptTag.match(/agentchainId=([^&"']+)/);
       agentId = agentIdMatch ? agentIdMatch[1] : undefined;
       
@@ -375,24 +425,19 @@ export async function loginAtenxionDispatcher(
         console.log('[loginAtenxionDispatcher] No agentchainId found in embed');
       }
     }
-    resolvedToken = embed?.contextualKey;
+    if (!resolvedToken) {
+      resolvedToken = embed?.contextualKey;
+    }
   }
 
-  // Prepare credentials with userId and extracted agentId
   const credentialsWithExtracted: AtenxionSenderCredentials = {
     agentId: agentId || credentials.agentId,
     userId: credentials.userId,
     role: userRole,
   };
-  const requestBody = normalizeSenderCredentials(credentialsWithExtracted, true);
-
-  // If we have resolvedToken (contextKey from MongoDB), use it as Authorization in body
-  // The contextKey from MongoDB is the token we need to send
-  if (resolvedToken) {
-    requestBody.Authorization = resolvedToken; // Use contextKey directly as token
-  }
-
-  const headers = getHeaders(resolvedToken); // Headers only for Content-Type, Authorization goes in body
+  
+  const requestBody = normalizeDispatcherCredentials(credentialsWithExtracted, resolvedToken);
+  const headers = getHeaders(resolvedToken);
 
   console.log("Atenxion dispatcher login API call:", {
     url,  
@@ -403,8 +448,8 @@ export async function loginAtenxionDispatcher(
   });
 
   try {
-    const pp = await axios.post(url, requestBody, { headers });
-    console.log("Atenxion dispatcher login response:", pp);
+    const response = await axios.post(url, requestBody, { headers });
+    console.log("Atenxion dispatcher login response:", response);
     return true;
   } catch (error) {
     console.error("Atenxion dispatcher login failed:", error);

@@ -16,13 +16,13 @@ const signToken = (user) =>
   });
 
 router.post('/register', validateBody(registerSchema), async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, phone } = req.body;
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(400, 'Email already registered');
   const hashed = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({ data: { name, email, password: hashed, role } });
+  const user = await prisma.user.create({ data: { name, email, password: hashed, role, phone: phone || null } });
   const token = signToken(user);
-  res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+  res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name, phone: user.phone } });
 });
 
 router.post('/login', validateBody(loginSchema), async (req, res) => {
@@ -32,7 +32,7 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) throw new AppError(400, 'Invalid credentials');
   const token = signToken(user);
-  res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+  res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name, phone: user.phone } });
 });
 
 // POST /auth/logout - Logout user and call Atenxion API (requires authentication)

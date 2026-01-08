@@ -22,8 +22,11 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
   const senderId = req.user.id;
   const trackingCode = generateTrackingCode();
   
-  // Get sender details for PDF
-  const sender = await prisma.user.findUnique({ where: { id: senderId } });
+  // Get sender details for PDF (include phone)
+  const sender = await prisma.user.findUnique({ 
+    where: { id: senderId },
+    select: { id: true, name: true, email: true, phone: true, role: true }
+  });
   
   const delivery = await prisma.delivery.create({
     data: {
@@ -69,7 +72,7 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
   const deliveryWithDetails = await prisma.delivery.findUnique({
     where: { id: delivery.id },
     include: {
-      sender: { select: { id: true, name: true, email: true, role: true } },
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       assignments: { 
         include: { 
           courier: { select: { id: true, name: true, email: true, role: true } } 
@@ -78,7 +81,7 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
       },
       events: { 
         include: { 
-          createdBy: { select: { id: true, name: true, role: true } } 
+          createdBy: { select: { id: true, name: true, phone: true, role: true } } 
         }, 
         orderBy: { createdAt: 'asc' } 
       }
@@ -101,7 +104,7 @@ router.post('/agent/deliveries/trackingCode', requireAuth, requireRoles('SENDER'
   const delivery = await prisma.delivery.findUnique({
     where: { trackingCode },
     include: {
-      sender: { select: { id: true, name: true, email: true, role: true } },
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       assignments: { 
         include: { 
           courier: { select: { id: true, name: true, email: true, role: true } } 
@@ -110,7 +113,7 @@ router.post('/agent/deliveries/trackingCode', requireAuth, requireRoles('SENDER'
       },
       events: { 
         include: { 
-          createdBy: { select: { id: true, name: true, role: true } } 
+          createdBy: { select: { id: true, name: true, phone: true, role: true } } 
         }, 
         orderBy: { createdAt: 'asc' } 
       }
@@ -148,7 +151,7 @@ router.post('/agent/deliveries/list', requireAuth, requireRoles('SENDER'), valid
   const deliveries = await prisma.delivery.findMany({
     where: { senderId: requestedSenderId },
     include: {
-      sender: { select: { id: true, name: true, email: true, role: true } },
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       assignments: { 
         include: { 
           courier: { select: { id: true, name: true, email: true, role: true } } 
@@ -157,7 +160,7 @@ router.post('/agent/deliveries/list', requireAuth, requireRoles('SENDER'), valid
       },
       events: { 
         include: { 
-          createdBy: { select: { id: true, name: true, role: true } } 
+          createdBy: { select: { id: true, name: true, phone: true, role: true } } 
         }, 
         orderBy: { createdAt: 'asc' } 
       }
@@ -227,6 +230,7 @@ router.post('/agent/sender-profile', requireAuth, requireRoles('SENDER'), async 
       id: true,
       name: true,
       email: true,
+      phone: true,
       role: true,
       createdAt: true
     }

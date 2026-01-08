@@ -19,9 +19,9 @@ const router = express.Router();
 const requireAuth = [authMiddleware];
 
 const includeDeliveryRelations = {
-  sender: { select: { id: true, name: true, email: true, role: true } },
+  sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
   assignments: { include: { courier: { select: { id: true, name: true, email: true, role: true } } }, orderBy: { assignedAt: 'desc' } },
-  events: { include: { createdBy: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: 'asc' } }
+  events: { include: { createdBy: { select: { id: true, name: true, phone: true, role: true } } }, orderBy: { createdAt: 'asc' } }
 };
 
 const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, userId }) =>
@@ -51,8 +51,11 @@ router.post('/deliveries', requireAuth, requireRoles('SENDER', 'ADMIN'), validat
   const senderId = req.user.id;
   const trackingCode = generateTrackingCode();
   
-  // Get sender details for PDF
-  const sender = await prisma.user.findUnique({ where: { id: senderId } });
+  // Get sender details for PDF (include phone)
+  const sender = await prisma.user.findUnique({ 
+    where: { id: senderId },
+    select: { id: true, name: true, email: true, phone: true, role: true }
+  });
   
   const delivery = await prisma.delivery.create({
     data: {
@@ -97,6 +100,7 @@ router.get('/deliveries/:trackingCode/public', async (req, res) => {
       receiverName: true,
       receiverPhone: true,
       createdAt: true,
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       events: {
         orderBy: { createdAt: 'asc' },
         select: {
@@ -106,7 +110,7 @@ router.get('/deliveries/:trackingCode/public', async (req, res) => {
           proofImageUrl: true,
           locationText: true,
           createdAt: true,
-          createdBy: { select: { name: true, role: true } }
+          createdBy: { select: { name: true, phone: true, role: true } }
         }
       }
     }
@@ -126,32 +130,35 @@ router.get('/me/deliveries', requireAuth, async (req, res) => {
   const role = req.user.role;
   let deliveries = [];
   const includeEvents = {
-    events: {
-      include: { createdBy: { select: { id: true, name: true, role: true } } },
-      orderBy: { createdAt: 'asc' }
-    }
+      events: {
+        include: { createdBy: { select: { id: true, name: true, phone: true, role: true } } },
+        orderBy: { createdAt: 'asc' }
+      }
+  };
+  const includeSender = {
+    sender: { select: { id: true, name: true, email: true, phone: true, role: true } }
   };
   
   if (role === 'SENDER') {
     deliveries = await prisma.delivery.findMany({ 
       where: { senderId: req.user.id }, 
-      include: includeEvents,
+      include: { ...includeEvents, ...includeSender },
       orderBy: { createdAt: 'desc' } 
     });
   } else if (role === 'COURIER') {
     deliveries = await prisma.delivery.findMany({
       where: { assignments: { some: { courierId: req.user.id } } },
-      include: includeEvents,
+      include: { ...includeEvents, ...includeSender },
       orderBy: { createdAt: 'desc' }
     });
   } else if (role === 'DISPATCHER') {
     deliveries = await prisma.delivery.findMany({ 
-      include: includeEvents,
+      include: { ...includeEvents, ...includeSender },
       orderBy: { createdAt: 'desc' } 
     });
   } else if (role === 'ADMIN') {
     deliveries = await prisma.delivery.findMany({ 
-      include: includeEvents,
+      include: { ...includeEvents, ...includeSender },
       orderBy: { createdAt: 'desc' } 
     });
   }

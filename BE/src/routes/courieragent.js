@@ -126,13 +126,13 @@ router.post('/agent/courier/update-delivery', requireAuth, requireRoles('COURIER
   const deliveryWithRelations = await prisma.delivery.findUnique({
     where: { id: deliveryId },
     include: {
-      sender: { select: { id: true, name: true, email: true, role: true } },
+      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
       assignments: {
         include: { courier: { select: { id: true, name: true, email: true, role: true } } },
         orderBy: { assignedAt: 'desc' }
       },
       events: {
-        include: { createdBy: { select: { id: true, name: true, role: true } } },
+        include: { createdBy: { select: { id: true, name: true, phone: true, role: true } } },
         orderBy: { createdAt: 'asc' }
       }
     }
@@ -211,6 +211,7 @@ router.post('/agent/courier/delivery-details', requireAuth, requireRoles('COURIE
           id: true, 
           name: true, 
           email: true, 
+          phone: true,
           role: true 
         } 
       },
@@ -233,6 +234,7 @@ router.post('/agent/courier/delivery-details', requireAuth, requireRoles('COURIE
             select: { 
               id: true, 
               name: true, 
+              phone: true,
               role: true 
             } 
           } 

@@ -329,7 +329,7 @@ export default function SenderDashboard() {
                         }
                       }}
                     >
-                      <ListItemText
+                    <ListItemText
                         primary={
                           <Stack direction="row" spacing={1} alignItems="center">
                             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -389,7 +389,7 @@ export default function SenderDashboard() {
                           {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         </IconButton>
                       </Stack>
-                    </ListItem>
+                  </ListItem>
                     
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                       <Divider sx={{ borderColor: 'rgba(201, 162, 39, 0.15)' }} />
@@ -466,6 +466,24 @@ export default function SenderDashboard() {
                             No events yet
                           </Typography>
                         )}
+                        {/* Delivery Details */}
+                        <Divider sx={{ my: 2, borderColor: 'rgba(201, 162, 39, 0.15)' }} />
+                        <Stack spacing={1.5}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                            Delivery Information
+                          </Typography>
+                          <Stack spacing={1}>
+                            <Typography variant="body2">
+                              <strong>Receiver:</strong> {d.receiverName}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Receiver Phone:</strong> {d.receiverPhone}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Destination:</strong> {d.destinationAddress}
+                            </Typography>
+                          </Stack>
+                        </Stack>
                       </Stack>
                     </Collapse>
                   </Paper>

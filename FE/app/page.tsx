@@ -178,11 +178,11 @@ export default function HomePage() {
           <Grid container spacing={3} sx={{ mt: 1 }}>
             {features.map((feature) => (
               <Grid item xs={12} md={4} key={feature.title}>
-                  <Card
-                    variant="outlined"
-                    sx={{
-                      height: '100%',
-                      borderRadius: 3,
+                <Card
+                  variant="outlined"
+                  sx={{
+                    height: '100%',
+                    borderRadius: 3,
                       borderColor: 'rgba(201, 162, 39, 0.15)',
                       bgcolor: '#1F1F1F',
                       boxShadow: '0 15px 45px rgba(0, 0, 0, 0.2)',
@@ -192,8 +192,8 @@ export default function HomePage() {
                         borderColor: 'rgba(201, 162, 39, 0.3)',
                         transform: 'translateY(-2px)'
                       }
-                    }}
-                  >
+                  }}
+                >
                   <CardContent>
                     <Box sx={{ mb: 2 }}>{feature.icon}</Box>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>

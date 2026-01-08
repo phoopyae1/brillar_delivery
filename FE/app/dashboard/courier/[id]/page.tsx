@@ -495,7 +495,7 @@ export default function CourierDashboardById() {
                                     <>
                                       <Typography variant="caption" color="text.secondary">•</Typography>
                                       <Typography variant="caption" color="text.secondary">
-                                        {event.createdBy.name} ({event.createdBy.role})
+                                        {event.createdBy.name} ({event.createdBy.role}){event.createdBy.phone ? ` - ${event.createdBy.phone}` : ''}
                                       </Typography>
                                     </>
                                   )}
@@ -508,6 +508,29 @@ export default function CourierDashboardById() {
                             No events yet
                           </Typography>
                         )}
+                        {/* Delivery Details */}
+                        <Divider sx={{ my: 2, borderColor: 'rgba(201, 162, 39, 0.15)' }} />
+                        <Stack spacing={1.5}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                            Delivery Information
+                          </Typography>
+                          <Stack spacing={1}>
+                            <Typography variant="body2">
+                              <strong>Receiver:</strong> {d.receiverName}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Receiver Phone:</strong> {d.receiverPhone}
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Destination:</strong> {d.destinationAddress}
+                            </Typography>
+                            {d.sender && (
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                <strong>Sender:</strong> {d.sender.name} ({d.sender.role})
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Stack>
                       </Stack>
                     </Collapse>
                   </Paper>

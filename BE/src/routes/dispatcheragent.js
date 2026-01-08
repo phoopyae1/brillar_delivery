@@ -131,6 +131,7 @@ router.post('/agent/dispatcher/deliveries', requireAuth, requireRoles('DISPATCHE
           id: true, 
           name: true, 
           email: true, 
+          phone: true,
           role: true 
         } 
       },
@@ -153,6 +154,7 @@ router.post('/agent/dispatcher/deliveries', requireAuth, requireRoles('DISPATCHE
             select: { 
               id: true, 
               name: true, 
+              phone: true,
               role: true 
             } 
           } 

@@ -10,7 +10,8 @@ export default function RegisterPage() {
     name: 'New Sender',
     email: 'user@example.com',
     password: 'password123',
-    role: 'SENDER'
+    role: 'SENDER',
+    phone: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +24,8 @@ export default function RegisterPage() {
         name: form.name,
         email: form.email,
         password: form.password,
-        role: form.role as any
+        role: form.role as any,
+        phone: form.phone || undefined
       });
       setAuth(data);
       // Redirect to role-specific dashboard with ID in URL
@@ -93,6 +95,14 @@ export default function RegisterPage() {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             fullWidth
+          />
+          <TextField
+            label="Phone Number"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            fullWidth
+            placeholder="e.g., 555-0100"
+            helperText="Optional phone number"
           />
           <TextField 
             select 
