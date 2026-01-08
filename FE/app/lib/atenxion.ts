@@ -77,71 +77,81 @@ export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER'
 }
 
 // Normalize sender credentials (following the pattern from normalizeCredentials)
+// Note: authToken parameter is for integration API calls, not for Authorization header
+// Authorization header always uses token from sender_session in localStorage
 function normalizeSenderCredentials(
   credentials: AtenxionSenderCredentials,
-  authToken?: string | null
+  authToken?: string | null // This is for integration API (contextualKey), not for Authorization header
 ): AtenxionRequestBody {
   const userId = credentials.userId ? String(credentials.userId).trim() : '';
   const agentId = credentials.agentId?.trim();
   
-  let resolvedAuthToken = authToken || "";
+  // Always get Authorization token from sender_session in localStorage (our app's token)
+  let resolvedAuthToken = "";
   
-
-    // Use sender session token from localStorage (if available)
-    const stored = typeof window !== 'undefined' ? localStorage.getItem("sender_session") : null;
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem("sender_session");
     if (stored) {
       try {
-        resolvedAuthToken = JSON.parse(stored).token;
-        console.log('resolvedAuthToken', resolvedAuthToken);
+        const parsed = JSON.parse(stored);
+        resolvedAuthToken = parsed?.token || "";
       } catch (e) {
-        // If not JSON, use as-is
+        // If not JSON, use as-is (might be a plain string token)
         resolvedAuthToken = stored;
-        console.log('resolvedAuthToken', resolvedAuthToken);
       }
     }
+  }
   
+  console.log('resolvedAuthToken (from sender_session):', resolvedAuthToken);
   
   const body: AtenxionRequestBody = {
     userId,
     senderId: userId,
     role: credentials.role,
-    Authorization: `Bearer ${resolvedAuthToken}`,
+    Authorization: `Bearer ${resolvedAuthToken}`, // Always use token from sender_session
   };
   
   if (agentId) {
     body.agentId = agentId;
   }
-  console.log('body', body);
+  
+
   return body;
 }
 
 // Normalize courier credentials (following the pattern from normalizeCredentials)
+// Note: authToken parameter is for integration API calls, not for Authorization header
+// Authorization header always uses token from courier_session in localStorage
 function normalizeCourierCredentials(
   credentials: AtenxionSenderCredentials,
-  authToken?: string | null
+  authToken?: string | null // This is for integration API (contextualKey), not for Authorization header
 ): AtenxionRequestBody {
   const userId = credentials.userId ? String(credentials.userId).trim() : '';
   const agentId = credentials.agentId?.trim();
   
-  let resolvedAuthToken = authToken || "";
-
-    // Use courier session token from localStorage (if available)
-    const stored = typeof window !== 'undefined' ? localStorage.getItem("courier_session") : null;
+  // Always get Authorization token from courier_session in localStorage (our app's token)
+  let resolvedAuthToken = "";
+  
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem("courier_session");
     if (stored) {
       try {
-        resolvedAuthToken = JSON.parse(stored).token;
+        const parsed = JSON.parse(stored);
+        resolvedAuthToken = parsed?.token || "";
       } catch (e) {
-        // If not JSON, use as-is
+        // If not JSON, use as-is (might be a plain string token)
         resolvedAuthToken = stored;
-      
+      }
     }
   }
+  
+  console.log('resolvedAuthToken (from courier_session):', resolvedAuthToken);
   
   const body: AtenxionRequestBody = {
     userId,
     senderId: userId,
     role: credentials.role,
-    Authorization: `Bearer ${resolvedAuthToken}`,
+    Authorization: `Bearer ${resolvedAuthToken}`, // Always use token from courier_session
   };
   
   if (agentId) {
@@ -152,33 +162,38 @@ function normalizeCourierCredentials(
 }
 
 // Normalize dispatcher credentials (following the pattern from normalizeCredentials)
+// Note: authToken parameter is for integration API calls, not for Authorization header
+// Authorization header always uses token from dispatcher_session in localStorage
 function normalizeDispatcherCredentials(
   credentials: AtenxionSenderCredentials,
-  authToken?: string | null
+  authToken?: string | null // This is for integration API (contextualKey), not for Authorization header
 ): AtenxionRequestBody {
   const userId = credentials.userId ? String(credentials.userId).trim() : '';
   const agentId = credentials.agentId?.trim();
   
-  let resolvedAuthToken = authToken || "";
+  // Always get Authorization token from dispatcher_session in localStorage (our app's token)
+  let resolvedAuthToken = "";
   
-  // If no token provided, try to get from localStorage
-    // Use dispatcher session token from localStorage (if available)
-    const stored = typeof window !== 'undefined' ? localStorage.getItem("dispatcher_session") : null;
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem("dispatcher_session");
     if (stored) {
       try {
-        resolvedAuthToken = JSON.parse(stored).token;
+        const parsed = JSON.parse(stored);
+        resolvedAuthToken = parsed?.token || "";
       } catch (e) {
-        // If not JSON, use as-is
+        // If not JSON, use as-is (might be a plain string token)
         resolvedAuthToken = stored;
       }
-    
+    }
   }
+  
+  console.log('resolvedAuthToken (from dispatcher_session):', resolvedAuthToken);
   
   const body: AtenxionRequestBody = {
     userId,
     senderId: userId,
     role: credentials.role,
-    Authorization: `Bearer ${resolvedAuthToken}`,
+    Authorization: `Bearer ${resolvedAuthToken}`, // Always use token from dispatcher_session
   };
   
   if (agentId) {
@@ -262,10 +277,11 @@ export async function loginAtenxionSender(
   };
   
   // Normalize credentials and include Authorization in body
-  // Use resolvedToken (contextKey from MongoDB) as Authorization token
+  // resolvedToken (contextKey from MongoDB) is used for integration API calls (getHeaders)
+  // Authorization header in body uses token from sender_session localStorage (handled in normalizeSenderCredentials)
   const requestBody = normalizeSenderCredentials(credentialsWithExtracted, resolvedToken);
 
-  const headers = getHeaders(resolvedToken); // Headers only for Content-Type, Authorization goes in body
+  const headers = getHeaders(resolvedToken); // Headers for integration API (contextualKey), Authorization goes in body
 
   console.log("Atenxion sender login API call:", {
     url,  
@@ -349,8 +365,11 @@ export async function loginAtenxionCourier(
     role: userRole,
   };
   
+  // Normalize credentials and include Authorization in body
+  // resolvedToken (contextKey from MongoDB) is used for integration API calls (getHeaders)
+  // Authorization header in body uses token from courier_session localStorage (handled in normalizeCourierCredentials)
   const requestBody = normalizeCourierCredentials(credentialsWithExtracted, resolvedToken);
-  const headers = getHeaders(resolvedToken);
+  const headers = getHeaders(resolvedToken); // Headers for integration API (contextualKey), Authorization goes in body
 
   console.log("Atenxion courier login API call:", {
     url,  
@@ -434,8 +453,11 @@ export async function loginAtenxionDispatcher(
     role: userRole,
   };
   
+  // Normalize credentials and include Authorization in body
+  // resolvedToken (contextKey from MongoDB) is used for integration API calls (getHeaders)
+  // Authorization header in body uses token from dispatcher_session localStorage (handled in normalizeDispatcherCredentials)
   const requestBody = normalizeDispatcherCredentials(credentialsWithExtracted, resolvedToken);
-  const headers = getHeaders(resolvedToken);
+  const headers = getHeaders(resolvedToken); // Headers for integration API (contextualKey), Authorization goes in body
 
   console.log("Atenxion dispatcher login API call:", {
     url,  
