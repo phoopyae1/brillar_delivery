@@ -9,6 +9,8 @@ const deliveryRoutes = require('./routes/deliveries');
 const integrationRoutes = require('./routes/integrations');
 const senderAgentRoutes = require('./routes/senderagent');
 const publicAgentRoutes = require('./routes/publicagent');
+const dispatcherAgentRoutes = require('./routes/dispatcheragent');
+const courierAgentRoutes = require('./routes/courieragent');
 const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -34,6 +36,8 @@ app.use('/', deliveryRoutes);
 app.use('/', integrationRoutes);
 app.use('/', senderAgentRoutes);
 app.use('/', publicAgentRoutes);
+app.use('/', dispatcherAgentRoutes);
+app.use('/', courierAgentRoutes);
 
 app.use(errorHandler);
 
