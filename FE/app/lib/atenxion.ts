@@ -86,19 +86,20 @@ function normalizeSenderCredentials(
   
   let resolvedAuthToken = authToken || "";
   
-  // If no token provided, try to get from localStorage
-  if (!resolvedAuthToken) {
+
     // Use sender session token from localStorage (if available)
     const stored = typeof window !== 'undefined' ? localStorage.getItem("sender_session") : null;
     if (stored) {
       try {
         resolvedAuthToken = JSON.parse(stored).token;
+        console.log('resolvedAuthToken', resolvedAuthToken);
       } catch (e) {
         // If not JSON, use as-is
         resolvedAuthToken = stored;
+        console.log('resolvedAuthToken', resolvedAuthToken);
       }
     }
-  }
+  
   
   const body: AtenxionRequestBody = {
     userId,
@@ -123,9 +124,7 @@ function normalizeCourierCredentials(
   const agentId = credentials.agentId?.trim();
   
   let resolvedAuthToken = authToken || "";
-  
-  // If no token provided, try to get from localStorage
-  if (!resolvedAuthToken) {
+
     // Use courier session token from localStorage (if available)
     const stored = typeof window !== 'undefined' ? localStorage.getItem("courier_session") : null;
     if (stored) {
@@ -134,7 +133,7 @@ function normalizeCourierCredentials(
       } catch (e) {
         // If not JSON, use as-is
         resolvedAuthToken = stored;
-      }
+      
     }
   }
   
@@ -163,7 +162,6 @@ function normalizeDispatcherCredentials(
   let resolvedAuthToken = authToken || "";
   
   // If no token provided, try to get from localStorage
-  if (!resolvedAuthToken) {
     // Use dispatcher session token from localStorage (if available)
     const stored = typeof window !== 'undefined' ? localStorage.getItem("dispatcher_session") : null;
     if (stored) {
@@ -173,7 +171,7 @@ function normalizeDispatcherCredentials(
         // If not JSON, use as-is
         resolvedAuthToken = stored;
       }
-    }
+    
   }
   
   const body: AtenxionRequestBody = {
