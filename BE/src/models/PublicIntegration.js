@@ -1,6 +1,6 @@
 const { mongoose } = require('../mongodb');
 
-const integrationSchema = new mongoose.Schema({
+const publicIntegrationSchema = new mongoose.Schema({
   contextualKey: {
     type: String,
     required: true,
@@ -11,11 +11,10 @@ const integrationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  role: {
+  name: {
     type: String,
-    enum: ['SENDER', 'DISPATCHER', 'COURIER', 'PUBLIC', 'ADMIN'],
     required: false,
-    default: null
+    trim: true
   },
   createdAt: {
     type: Date,
@@ -25,14 +24,14 @@ const integrationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-});
+}, { collection: 'public_integrations' });
 
 // Update the updatedAt field before saving
-integrationSchema.pre('save', async function() {
+publicIntegrationSchema.pre('save', async function() {
   this.updatedAt = Date.now();
 });
 
-const Integration = mongoose.models.Integration || mongoose.model('Integration', integrationSchema);
+const PublicIntegration = mongoose.models.PublicIntegration || mongoose.model('PublicIntegration', publicIntegrationSchema);
 
-module.exports = Integration;
+module.exports = PublicIntegration;
 

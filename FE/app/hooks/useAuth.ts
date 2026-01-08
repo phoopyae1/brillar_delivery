@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { authApi } from '../lib/api';
 
 type User = {
   id: number;
@@ -30,9 +31,21 @@ export function useAuth() {
     setToken(payload.token);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Call logout API if token exists
+    if (token) {
+      try {
+        await authApi.logout(token);
+      } catch (error) {
+        // Log but don't block logout - clear local storage anyway
+        console.error('Logout API call failed:', error);
+      }
+    }
+    
+    // Clear local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('sender_session');
     setUser(null);
     setToken(null);
   };

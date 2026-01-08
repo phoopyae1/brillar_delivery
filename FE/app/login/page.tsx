@@ -1,6 +1,5 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { authApi } from '../lib/api';
 import { Button, Container, Paper, Stack, TextField, Typography, Alert } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +14,6 @@ interface SenderSession {
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const { setAuth } = useAuth();
   const [email, setEmail] = useState('sender@example.com');
   const [password, setPassword] = useState('password123');
@@ -85,19 +83,23 @@ export default function LoginPage() {
       }
       
       // Route based on role if available, otherwise default to sender dashboard with ID
+      // Use window.location.href for full page refresh
       const role = data.user?.role;
+      let redirectUrl = '/dashboard/sender';
+      
       if (role === 'DISPATCHER' && data.user?.id) {
-        router.push(`/dashboard/dispatcher/${data.user.id}`);
+        redirectUrl = `/dashboard/dispatcher/${data.user.id}`;
       } else if (role === 'COURIER' && data.user?.id) {
-        router.push(`/dashboard/courier/${data.user.id}`);
+        redirectUrl = `/dashboard/courier/${data.user.id}`;
       } else if (role === 'ADMIN') {
-        router.push('/admin');
+        redirectUrl = '/admin';
       } else if (data.user?.id) {
         // Redirect to /sender/{senderid} with sender ID in URL
-        router.push(`/sender/${data.user.id}`);
-      } else {
-        router.push('/dashboard/sender');
+        redirectUrl = `/sender/${data.user.id}`;
       }
+      
+      // Force full page refresh after login
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message);
     } finally {

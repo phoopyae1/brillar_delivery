@@ -56,7 +56,7 @@ const integrationSchema = z.object({
   name: z.string().optional(),
   contextualKey: z.string().min(1, 'Contextual key is required'),
   iframeScriptTag: z.string().min(1, 'Iframe/Script tag is required'),
-  role: z.enum(['SENDER', 'DISPATCHER', 'COURIER']).optional()
+  role: z.enum(['SENDER', 'DISPATCHER', 'COURIER', 'PUBLIC', 'ADMIN']).optional()
 });
 
 const trackingCodeSchema = z.object({
@@ -64,7 +64,7 @@ const trackingCodeSchema = z.object({
 });
 
 const senderIdSchema = z.object({
-  senderId: z.string().uuid('Invalid sender ID format')
+  senderId: z.string().uuid('Invalid sender ID format').optional()
 });
 
 module.exports = {

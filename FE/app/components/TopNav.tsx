@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import { AppBar, Toolbar, Typography, Stack, Button } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
@@ -10,11 +9,11 @@ const getSenderLink = (userId?: number) => {
 };
 
 const allLinks = [
-  { href: '/', label: 'Home', roles: [] }, // Everyone can see Home
-  { href: '/track/quick', label: 'Track', roles: [] }, // Everyone can see Track
+  { href: '/', label: 'Home', roles: [], logoutOnClick: true }, // Everyone can see Home, logout on click
+  { href: '/track/quick', label: 'Track', roles: [], showWhenLoggedIn: false }, // Only show when NOT logged in
   { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'], dynamic: true }, // ADMIN has access, will be replaced with /sender/{id}
   { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'] }, // ADMIN has access
-  { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'DISPATCHER', 'ADMIN'] }, // ADMIN has access
+  { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'ADMIN'] }, // ADMIN has access, removed DISPATCHER
   { href: '/admin', label: 'Admin', roles: ['ADMIN'] } // ADMIN only
 ];
 
@@ -26,14 +25,31 @@ export default function TopNav() {
   // Filter links based on user role
   const getVisibleLinks = () => {
     if (!user) {
-      // Not logged in - show only public links
-      return allLinks.filter(link => link.roles.length === 0);
+      // Not logged in - show public links including Track
+      return allLinks.filter(link => {
+        // Show links with no role requirement (public links)
+        // Track link has showWhenLoggedIn: false, which means show when NOT logged in
+        if (link.roles.length === 0) {
+          // If showWhenLoggedIn is false, it means show when NOT logged in, so include it
+          if (link.showWhenLoggedIn === false) {
+            return true; // Show Track when not logged in
+          }
+          // Other public links (like Home) are always shown
+          return true;
+        }
+        return false;
+      });
     }
-    // Logged in - show public links + role-specific links
+    // Logged in - show public links + role-specific links (but hide Track)
     // ADMIN role has access to all dashboards (sender, dispatcher, courier, admin)
-    return allLinks.filter(link => 
-      link.roles.length === 0 || link.roles.includes(user.role)
-    );
+    return allLinks.filter(link => {
+      // Hide Track when logged in
+      if (link.showWhenLoggedIn === false) {
+        return false;
+      }
+      // Show if it's a public link or user has the required role
+      return link.roles.length === 0 || link.roles.includes(user.role);
+    });
   };
 
   const visibleLinks = getVisibleLinks();
@@ -59,11 +75,23 @@ export default function TopNav() {
             const href = (link as any).dynamic && user?.id ? getSenderLink(user.id) : link.href;
             const isActive = pathname?.startsWith(href) || (href.includes('/sender/') && pathname?.startsWith('/sender/'));
             
+            // Handle navigation with full page refresh
+            const handleClick = async (e: React.MouseEvent) => {
+              e.preventDefault();
+              
+              // Handle logout on Home click
+              if ((link as any).logoutOnClick && user) {
+                await logout();
+              }
+              
+              // Use window.location for full page refresh
+              window.location.href = href;
+            };
+            
             return (
               <Button
                 key={link.href}
-                component={Link}
-                href={href}
+                onClick={handleClick}
                 variant={isActive ? 'contained' : 'text'}
                 color={isActive ? 'primary' : 'inherit'}
                 sx={{
@@ -91,12 +119,15 @@ export default function TopNav() {
           {user ? (
             <Stack direction="row" spacing={1} alignItems="center">
               <Typography variant="body2">{user.name} ({user.role})</Typography>
-              <Button variant="outlined" size="small" onClick={() => { logout(); router.push('/login'); }}>
+              <Button variant="outlined" size="small" onClick={async () => { 
+                await logout(); 
+                window.location.href = '/login'; 
+              }}>
                 Logout
               </Button>
             </Stack>
           ) : (
-            <Button variant="contained" component={Link} href="/login">
+            <Button variant="contained" onClick={() => { window.location.href = '/login'; }}>
               Login
             </Button>
           )}

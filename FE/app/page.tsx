@@ -1,4 +1,6 @@
 'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Button,
@@ -11,11 +13,11 @@ import {
   Stack,
   Typography
 } from '@mui/material';
-import Link from 'next/link';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import BoltIcon from '@mui/icons-material/Bolt';
+import { useAuth } from './hooks/useAuth';
 
 const features = [
   {
@@ -42,6 +44,21 @@ const quickActions = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  // Auto-logout when logged-in user visits home page
+  useEffect(() => {
+    const handleLogout = async () => {
+      if (user) {
+        await logout();
+        // Force a refresh to ensure clean state
+        router.refresh();
+      }
+    };
+    handleLogout();
+  }, [user, logout, router]);
+
   return (
     <Box sx={{ position: 'relative', overflow: 'hidden' }}>
       <Box
@@ -74,8 +91,7 @@ export default function HomePage() {
                   key={action.href}
                   variant={action.variant as 'text' | 'outlined' | 'contained'}
                   size="large"
-                  component={Link}
-                  href={action.href}
+                  onClick={() => { window.location.href = action.href; }}
                   sx={{
                     textTransform: 'none',
                     borderRadius: '12px',

@@ -5,44 +5,120 @@ import { useAuth } from '../hooks/useAuth';
 import { Box } from '@mui/material';
 
 export default function ChatWidget() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
 
   // Load integrations from MongoDB filtered by user role
   useEffect(() => {
+    // Wait for auth to be ready before loading integrations
+    if (!ready) {
+      console.log('[ChatWidget] Auth not ready yet, waiting...');
+      return;
+    }
+
     const loadIntegrations = async () => {
       try {
-        const allIntegrations = await integrationApi.getAll();
-        console.log('[ChatWidget] All integrations from MongoDB:', allIntegrations.length);
-        console.log('[ChatWidget] Current user role:', user?.role || 'Not logged in');
+        // Fetch integrations filtered by user role from MongoDB
+        // If user is logged in, fetch only their role's integrations
+        // If not logged in, fetch all (for PUBLIC integrations)
+        const roleToFetch = user?.role || undefined;
+        const allIntegrations = await integrationApi.getAll(roleToFetch);
+        console.log('[ChatWidget] Fetched integrations from MongoDB:', allIntegrations.length);
+        console.log('[ChatWidget] Fetched for role:', roleToFetch || 'all (not logged in)');
+        console.log('[ChatWidget] Current user:', user ? `Logged in as ${user.role}` : 'Not logged in');
         
         // Filter integrations based on user role
-        // Show integrations that match the user's role OR have no role (for all roles)
+        // STRICT RULE: When logged in, ONLY show integrations that match the user's exact role
         const filteredIntegrations = allIntegrations.filter((integration: Integration) => {
-          // If no role is set on integration, show it to everyone
-          if (!integration.role) {
-            console.log('[ChatWidget] Including integration (no role):', integration.contextualKey);
+          // If user is logged in, apply strict filtering
+          if (user?.role) {
+            const integrationRole = String(integration.role || '').trim();
+            const userRole = String(user.role || '').trim();
+            
+            // Exclude PUBLIC integrations for logged-in users
+            if (integrationRole === 'PUBLIC') {
+              console.log(`[ChatWidget] ✗ Excluding PUBLIC integration ${integration.contextualKey} - user is logged in as ${userRole}`);
+              return false;
+            }
+            
+            // Exclude integrations with no role for logged-in users
+            if (!integration.role || integration.role === null || integrationRole === '') {
+              console.log(`[ChatWidget] ✗ Excluding integration ${integration.contextualKey} (no role) - user is logged in as ${userRole}`);
+              return false;
+            }
+            
+            // For ADMIN users: allow ADMIN integrations
+            if (userRole === 'ADMIN' && integrationRole === 'ADMIN') {
+              console.log(`[ChatWidget] ✓ Including ADMIN integration ${integration.contextualKey} - user is ADMIN`);
+              return true;
+            }
+            
+            // For all users: ONLY allow exact role match (SENDER, COURIER, DISPATCHER)
+            const exactMatch = integrationRole === userRole;
+            if (exactMatch) {
+              console.log(`[ChatWidget] ✓ Including ${integrationRole} integration ${integration.contextualKey} - matches user role ${userRole}`);
+            } else {
+              console.log(`[ChatWidget] ✗ Excluding ${integration.contextualKey} (role: "${integrationRole}") - does not match user role "${userRole}"`);
+            }
+            return exactMatch;
+          }
+          
+          // If user is NOT logged in, show PUBLIC integrations and integrations with no role
+          if (integration.role === 'PUBLIC') {
+            console.log('[ChatWidget] Including integration (PUBLIC) - user not logged in:', integration.contextualKey);
             return true;
           }
-          // If user is logged in, show integrations matching their role
-          if (user?.role) {
-            const matches = integration.role === user.role;
-            console.log(`[ChatWidget] Integration ${integration.contextualKey} (role: ${integration.role}) matches user role (${user.role}):`, matches);
-            return matches;
+          
+          // If no role is set, show it to non-logged-in users
+          if (!integration.role) {
+            console.log('[ChatWidget] Including integration (no role) - user not logged in:', integration.contextualKey);
+            return true;
           }
-          // If user is not logged in, only show integrations with no role
+          
+          // If user is not logged in, don't show role-specific integrations
+          console.log(`[ChatWidget] Excluding integration ${integration.contextualKey} (role: ${integration.role}) - user not logged in`);
           return false;
         });
         
-        console.log('[ChatWidget] Filtered integrations by role:', filteredIntegrations.length);
-        setIntegrations(filteredIntegrations || []);
+        // For logged-in users: Only keep integrations that exactly match their role
+        // For non-logged-in users: Keep PUBLIC and no-role integrations
+        let finalIntegrations = filteredIntegrations;
+        
+        if (user?.role) {
+          const userRole = String(user.role).trim();
+          console.log(`[ChatWidget] Final filtering for logged-in user (${userRole}):`);
+          
+          finalIntegrations = filteredIntegrations.filter((integration: Integration) => {
+            const integrationRole = String(integration.role || '').trim();
+            
+            // For ADMIN users: allow ADMIN integrations
+            if (userRole === 'ADMIN' && integrationRole === 'ADMIN') {
+              console.log(`[ChatWidget] ✓ Including ADMIN integration: ${integration.contextualKey}`);
+              return true;
+            }
+            
+            // For all users: only allow exact role match
+            if (integrationRole === userRole) {
+              console.log(`[ChatWidget] ✓ Including ${integrationRole} integration: ${integration.contextualKey} (matches user role ${userRole})`);
+              return true;
+            }
+            
+            // Exclude everything else
+            console.log(`[ChatWidget] ✗ Excluding ${integration.contextualKey} (role: "${integrationRole}") - does not match user role "${userRole}"`);
+            return false;
+          });
+        }
+        
+        console.log('[ChatWidget] Final filtered integrations:', finalIntegrations.length);
+        console.log('[ChatWidget] Integration roles:', finalIntegrations.map(i => `${i.contextualKey} (${i.role || 'no role'})`));
+        setIntegrations(finalIntegrations || []);
       } catch (error) {
         console.error('[ChatWidget] Error loading integrations:', error);
       }
     };
 
     loadIntegrations();
-  }, [user?.role]);
+  }, [user?.role, user, ready]);
 
   // Process and inject integrations (scripts and iframes)
   useEffect(() => {

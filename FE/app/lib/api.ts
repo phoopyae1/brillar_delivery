@@ -49,7 +49,8 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
 export const authApi = {
   login: (data: { email: string; password: string }) => apiFetch('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data: { name: string; email: string; password: string; role: User['role'] }) =>
-    apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) })
+    apiFetch('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  logout: (token: string) => apiFetch('/auth/logout', { method: 'POST' }, token)
 };
 
 export const deliveryApi = {
@@ -98,7 +99,7 @@ export const deliveryApi = {
 
 export type Integration = {
   _id?: string;
-  role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | null;
+  role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' | null;
   name: string;
   contextualKey: string;
   iframeScriptTag: string;
@@ -107,12 +108,15 @@ export type Integration = {
 };
 
 export const integrationApi = {
-  getAll: () => apiFetch('/integration', { method: 'GET' }),
+  getAll: (role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN') => {
+    const url = role ? `/integration?role=${role}` : '/integration';
+    return apiFetch(url, { method: 'GET' });
+  },
   getById: (id: string) => apiFetch(`/integration/${id}`, { method: 'GET' }),
   getByKey: (key: string) => apiFetch(`/integration/key/${key}`, { method: 'GET' }),
-  create: (data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' }) =>
+  create: (data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' }) =>
     apiFetch('/integration', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' }) =>
+  update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' }) =>
     apiFetch(`/integration/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => apiFetch(`/integration/${id}`, { method: 'DELETE' })
 };

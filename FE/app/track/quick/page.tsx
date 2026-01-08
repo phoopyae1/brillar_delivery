@@ -1,11 +1,22 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button, Container, Paper, Stack, TextField, Typography } from '@mui/material';
 
 export default function QuickTrackPage() {
-  const router = useRouter();
   const [code, setCode] = useState('');
+
+  const handleTrack = () => {
+    if (code.trim()) {
+      // Use window.location for full page refresh
+      window.location.href = `/track/${code.trim()}`;
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && code.trim()) {
+      handleTrack();
+    }
+  };
 
   return (
     <Container 
@@ -27,23 +38,30 @@ export default function QuickTrackPage() {
         }}
       >
         <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
-          Track a package
+          Track a Package
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Enter your tracking code to view delivery status and timeline
         </Typography>
         <Stack spacing={2} sx={{ mt: 2 }}>
           <TextField 
             label="Tracking code" 
             value={code} 
             onChange={(e) => setCode(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="e.g., OFF-2025-XXXXXX"
             fullWidth
+            autoFocus
           />
           <Button 
             variant="contained" 
-            onClick={() => router.push(`/track/${code}`)} 
-            disabled={!code}
+            onClick={handleTrack}
+            disabled={!code.trim()}
             fullWidth
+            size="large"
             sx={{ mt: 2 }}
           >
-            Track
+            Track Package
           </Button>
         </Stack>
       </Paper>

@@ -1,12 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { authApi } from '../lib/api';
 import { Button, Container, Paper, Stack, TextField, Typography, Alert, MenuItem } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const { setAuth } = useAuth();
   const [form, setForm] = useState({
     name: 'New Sender',
@@ -29,21 +27,23 @@ export default function RegisterPage() {
       });
       setAuth(data);
       // Redirect to role-specific dashboard with ID in URL
+      // Use window.location.href for full page refresh
+      let redirectUrl = '/dashboard/sender';
+      
       if (data.user?.id) {
         if (data.user.role === 'SENDER' || (data.user.role === 'ADMIN' && !data.user.role)) {
-          router.push(`/sender/${data.user.id}`);
+          redirectUrl = `/sender/${data.user.id}`;
         } else if (data.user.role === 'DISPATCHER') {
-          router.push(`/dashboard/dispatcher/${data.user.id}`);
+          redirectUrl = `/dashboard/dispatcher/${data.user.id}`;
         } else if (data.user.role === 'COURIER') {
-          router.push(`/dashboard/courier/${data.user.id}`);
+          redirectUrl = `/dashboard/courier/${data.user.id}`;
         } else if (data.user.role === 'ADMIN') {
-          router.push('/admin');
-        } else {
-          router.push('/dashboard/sender');
+          redirectUrl = '/admin';
         }
-      } else {
-      router.push('/dashboard/sender');
       }
+      
+      // Force full page refresh after registration
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message);
     } finally {

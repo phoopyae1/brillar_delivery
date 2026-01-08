@@ -17,7 +17,7 @@ export default function IntegrationPage() {
   const [form, setForm] = useState({
     contextualKey: '',
     iframeScriptTag: '',
-    role: '' as 'SENDER' | 'DISPATCHER' | 'COURIER' | ''
+    role: '' as 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' | ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,7 +46,7 @@ export default function IntegrationPage() {
       const dataToSave: {
         contextualKey: string;
         iframeScriptTag: string;
-        role?: 'SENDER' | 'DISPATCHER' | 'COURIER';
+        role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN';
       } = {
         contextualKey: form.contextualKey.trim(),
         iframeScriptTag: form.iframeScriptTag.trim()
@@ -180,7 +180,7 @@ export default function IntegrationPage() {
               select
               label="Role (Optional)"
               value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as 'SENDER' | 'DISPATCHER' | 'COURIER' | '' })}
+              onChange={(e) => setForm({ ...form, role: e.target.value as 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' | '' })}
               fullWidth
               helperText="Select the role this integration is for (optional)"
               sx={{
@@ -207,6 +207,8 @@ export default function IntegrationPage() {
               <MenuItem value="SENDER">Sender</MenuItem>
               <MenuItem value="DISPATCHER">Dispatcher</MenuItem>
               <MenuItem value="COURIER">Courier</MenuItem>
+              <MenuItem value="PUBLIC">Public</MenuItem>
+              <MenuItem value="ADMIN">Admin</MenuItem>
             </TextField>
 
             <Box sx={{ pt: 2 }}>

@@ -2,7 +2,7 @@ const express = require('express');
 const prisma = require('../prisma');
 const { authMiddleware, requireRoles } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
-const { createDeliverySchema, trackingCodeSchema } = require('../validators');
+const { createDeliverySchema, trackingCodeSchema, senderIdSchema } = require('../validators');
 const { generateTrackingCode } = require('../utils/trackingCode');
 const { generateDeliveryPDF } = require('../utils/pdfGenerator');
 const { createTransaction } = require('../utils/transaction');
@@ -65,11 +65,31 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
     console.error('[Sender Agent] Failed to create transaction:', err);
   });
   
+  // Get full delivery details with relations
+  const deliveryWithDetails = await prisma.delivery.findUnique({
+    where: { id: delivery.id },
+    include: {
+      sender: { select: { id: true, name: true, email: true, role: true } },
+      assignments: { 
+        include: { 
+          courier: { select: { id: true, name: true, email: true, role: true } } 
+        }, 
+        orderBy: { assignedAt: 'desc' } 
+      },
+      events: { 
+        include: { 
+          createdBy: { select: { id: true, name: true, role: true } } 
+        }, 
+        orderBy: { createdAt: 'asc' } 
+      }
+    }
+  });
+  
   // Return response in format expected by sender agent
   res.status(201).json({
     success: true,
     message: 'Delivery created successfully',
-    data: delivery
+    data: deliveryWithDetails
   });
 });
 
@@ -110,6 +130,89 @@ router.post('/agent/deliveries/trackingCode', requireAuth, requireRoles('SENDER'
   res.json({
     success: true,
     data: delivery
+  });
+});
+
+// POST /agent/deliveries/list - Get all deliveries for sender with full details (requires SENDER role)
+router.post('/agent/deliveries/list', requireAuth, requireRoles('SENDER'), validateBody(senderIdSchema), async (req, res) => {
+  // Use senderId from request body or authenticated user's ID
+  const requestedSenderId = req.body.senderId || req.user.id;
+  const authenticatedSenderId = req.user.id;
+  
+  // Ensure sender can only access their own deliveries
+  if (requestedSenderId !== authenticatedSenderId) {
+    throw new AppError(403, 'You can only view your own deliveries');
+  }
+  
+  // Get all deliveries for this sender with full details
+  const deliveries = await prisma.delivery.findMany({
+    where: { senderId: requestedSenderId },
+    include: {
+      sender: { select: { id: true, name: true, email: true, role: true } },
+      assignments: { 
+        include: { 
+          courier: { select: { id: true, name: true, email: true, role: true } } 
+        }, 
+        orderBy: { assignedAt: 'desc' } 
+      },
+      events: { 
+        include: { 
+          createdBy: { select: { id: true, name: true, role: true } } 
+        }, 
+        orderBy: { createdAt: 'asc' } 
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+  
+  // Format response with route information for each delivery
+  const formattedDeliveries = deliveries.map(delivery => ({
+    id: delivery.id,
+    trackingCode: delivery.trackingCode,
+    title: delivery.title,
+    description: delivery.description,
+    priority: delivery.priority,
+    status: delivery.status,
+    destinationAddress: delivery.destinationAddress,
+    receiverName: delivery.receiverName,
+    receiverPhone: delivery.receiverPhone,
+    pdfUrl: delivery.pdfUrl,
+    createdAt: delivery.createdAt,
+    sender: delivery.sender,
+    assignedCourier: delivery.assignments.length > 0 ? {
+      id: delivery.assignments[0].courier.id,
+      name: delivery.assignments[0].courier.name,
+      email: delivery.assignments[0].courier.email,
+      assignedAt: delivery.assignments[0].assignedAt
+    } : null,
+    currentRoute: {
+      status: delivery.status,
+      lastEvent: delivery.events.length > 0 ? {
+        type: delivery.events[delivery.events.length - 1].type,
+        note: delivery.events[delivery.events.length - 1].note,
+        locationText: delivery.events[delivery.events.length - 1].locationText,
+        proofImageUrl: delivery.events[delivery.events.length - 1].proofImageUrl,
+        createdAt: delivery.events[delivery.events.length - 1].createdAt,
+        createdBy: delivery.events[delivery.events.length - 1].createdBy
+      } : null,
+      totalEvents: delivery.events.length,
+      routeTimeline: delivery.events.map(event => ({
+        id: event.id,
+        type: event.type,
+        note: event.note,
+        locationText: event.locationText,
+        proofImageUrl: event.proofImageUrl,
+        createdAt: event.createdAt,
+        createdBy: event.createdBy
+      }))
+    }
+  }));
+  
+  // Return response in format expected by sender agent
+  res.json({
+    success: true,
+    total: formattedDeliveries.length,
+    data: formattedDeliveries
   });
 });
 
