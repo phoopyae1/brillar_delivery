@@ -3,6 +3,7 @@ const prisma = require('../prisma');
 const { authMiddleware, requireRoles } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const { z } = require('zod');
+const { createTransaction } = require('../utils/transaction');
 const { AppError } = require('../middleware/errorHandler');
 const { canTransition, getAllowedTransitions } = require('../constants/statuses');
 
@@ -135,6 +136,24 @@ router.post('/agent/courier/update-delivery', requireAuth, requireRoles('COURIER
         orderBy: { createdAt: 'asc' }
       }
     }
+  });
+  
+  // Create transaction via Atenxion API (non-blocking)
+  const transactionData = {
+    type: action === 'updateStatus' ? 'STATUS_UPDATED' : 'CHECKPOINT_ADDED',
+    deliveryId: deliveryWithRelations.id,
+    trackingCode: deliveryWithRelations.trackingCode,
+    action: action,
+    status: action === 'updateStatus' ? status : deliveryWithRelations.status,
+    eventType: event.type,
+    note: event.note,
+    locationText: event.locationText,
+    hasProofImage: !!event.proofImageUrl,
+    createdAt: event.createdAt
+  };
+  
+  createTransaction(courierId, transactionData, 'COURIER').catch(err => {
+    console.error('[Courier Agent] Failed to create transaction:', err);
   });
   
   // Return response in format expected by courier agent

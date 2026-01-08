@@ -3,6 +3,7 @@ const prisma = require('../prisma');
 const { authMiddleware, requireRoles } = require('../middleware/auth');
 const { validateBody } = require('../middleware/validate');
 const { z } = require('zod');
+const { createTransaction } = require('../utils/transaction');
 const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -79,6 +80,19 @@ router.post('/agent/dispatcher/assign-courier', requireAuth, requireRoles('DISPA
     type: 'ASSIGNED', 
     userId: dispatcherId, 
     note: `Assigned to ${courier.name}` 
+  });
+  
+  // Create transaction via Atenxion API (non-blocking)
+  createTransaction(dispatcherId, {
+    type: 'COURIER_ASSIGNED',
+    deliveryId: delivery.id,
+    trackingCode: delivery.trackingCode,
+    courierId: courier.id,
+    courierName: courier.name,
+    status: updatedDelivery.status,
+    assignedAt: assignment.assignedAt
+  }, 'DISPATCHER').catch(err => {
+    console.error('[Dispatcher Agent] Failed to create transaction:', err);
   });
   
   // Return response in format expected by dispatcher agent

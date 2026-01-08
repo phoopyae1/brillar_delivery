@@ -5,6 +5,7 @@ const { validateBody } = require('../middleware/validate');
 const { createDeliverySchema, trackingCodeSchema } = require('../validators');
 const { generateTrackingCode } = require('../utils/trackingCode');
 const { generateDeliveryPDF } = require('../utils/pdfGenerator');
+const { createTransaction } = require('../utils/transaction');
 const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -50,6 +51,19 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
   }
   
   await createEvent({ deliveryId: delivery.id, type: 'CREATED', note: 'Delivery created via sender agent', userId: senderId });
+  
+  // Create transaction via Atenxion API (non-blocking)
+  createTransaction(senderId, {
+    type: 'DELIVERY_CREATED',
+    deliveryId: delivery.id,
+    trackingCode: delivery.trackingCode,
+    title: delivery.title,
+    status: delivery.status,
+    priority: delivery.priority,
+    createdAt: delivery.createdAt
+  }, 'SENDER').catch(err => {
+    console.error('[Sender Agent] Failed to create transaction:', err);
+  });
   
   // Return response in format expected by sender agent
   res.status(201).json({

@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../prisma');
 const { registerSchema, loginSchema } = require('../validators');
 const { validateBody } = require('../middleware/validate');
+const { authMiddleware } = require('../middleware/auth');
+const { logoutUser, getIntegrationCredentials } = require('../utils/transaction');
 const { AppError } = require('../middleware/errorHandler');
 
 const router = express.Router();
@@ -31,6 +33,39 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
   if (!valid) throw new AppError(400, 'Invalid credentials');
   const token = signToken(user);
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
+});
+
+// POST /auth/logout - Logout user and call Atenxion API (requires authentication)
+router.post('/logout', authMiddleware, async (req, res) => {
+  const user = req.user;
+  
+  // Only logout SENDER, DISPATCHER, or COURIER roles
+  if (!['SENDER', 'DISPATCHER', 'COURIER'].includes(user.role)) {
+    return res.json({ 
+      success: true, 
+      message: 'Logout successful (no external logout required for this role)' 
+    });
+  }
+  
+  // Get integration credentials for the user's role
+  const credentials = await getIntegrationCredentials(user.role);
+  
+  if (credentials) {
+    const { agentId, token } = credentials;
+    
+    // Call Atenxion logout API (non-blocking)
+    logoutUser(user.id, agentId, token).catch(err => {
+      console.error('[Auth] Failed to logout from Atenxion:', err);
+    });
+  } else {
+    console.log(`[Auth] No integration found for role ${user.role}, skipping Atenxion logout`);
+  }
+  
+  // Return success response (logout is successful even if Atenxion call fails)
+  res.json({ 
+    success: true, 
+    message: 'Logout successful' 
+  });
 });
 
 module.exports = router;
