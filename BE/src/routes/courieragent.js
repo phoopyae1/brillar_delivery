@@ -294,5 +294,155 @@ router.post('/agent/courier/delivery-details', requireAuth, requireRoles('COURIE
   });
 });
 
+// POST /agent/courier-profile - Get courier profile details with delivery statistics (requires COURIER role)
+router.post('/agent/courier-profile', requireAuth, requireRoles('COURIER', 'ADMIN'), async (req, res) => {
+  const courierId = req.user.id;
+  
+  // Get courier user information
+  const courier = await prisma.user.findUnique({
+    where: { id: courierId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true
+    }
+  });
+  
+  if (!courier) {
+    throw new AppError(404, 'Courier not found');
+  }
+  
+  // Calculate date for last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Get all deliveries assigned to this courier
+  const assignedDeliveries = await prisma.delivery.findMany({
+    where: {
+      assignments: {
+        some: {
+          courierId: courierId
+        }
+      }
+    },
+    include: {
+      assignments: {
+        where: {
+          courierId: courierId
+        },
+        orderBy: {
+          assignedAt: 'desc'
+        }
+      },
+      events: {
+        where: {
+          createdById: courierId
+        },
+        orderBy: {
+          createdAt: 'asc'
+        }
+      }
+    }
+  });
+  
+  // Calculate statistics
+  const totalDeliveries = assignedDeliveries.length;
+  
+  // Count by status
+  const deliveriesByStatus = {
+    CREATED: 0,
+    ASSIGNED: 0,
+    PICKED_UP: 0,
+    IN_TRANSIT: 0,
+    OUT_FOR_DELIVERY: 0,
+    DELIVERED: 0,
+    CANCELLED: 0,
+    FAILED_DELIVERY: 0,
+    RETURNED: 0
+  };
+  
+  // Count by priority
+  const deliveriesByPriority = {
+    LOW: 0,
+    MEDIUM: 0,
+    HIGH: 0
+  };
+  
+  // Count recent deliveries (last 30 days)
+  let recentDeliveriesLast30Days = 0;
+  let recentDeliveredLast30Days = 0;
+  
+  // Count events/checkpoints added by courier
+  let totalCheckpoints = 0;
+  let totalStatusUpdates = 0;
+  
+  assignedDeliveries.forEach(delivery => {
+    // Count by status
+    if (deliveriesByStatus.hasOwnProperty(delivery.status)) {
+      deliveriesByStatus[delivery.status]++;
+    }
+    
+    // Count by priority
+    if (deliveriesByPriority.hasOwnProperty(delivery.priority)) {
+      deliveriesByPriority[delivery.priority]++;
+    }
+    
+    // Count recent deliveries (based on assignment date)
+    const assignment = delivery.assignments[0];
+    if (assignment && new Date(assignment.assignedAt) >= thirtyDaysAgo) {
+      recentDeliveriesLast30Days++;
+      if (delivery.status === 'DELIVERED') {
+        recentDeliveredLast30Days++;
+      }
+    }
+    
+    // Count events created by this courier
+    delivery.events.forEach(event => {
+      // Check if this is a status update (event type matches delivery status and is not the initial CREATED)
+      if (event.type === delivery.status && event.type !== 'CREATED') {
+        totalStatusUpdates++;
+      } else {
+        // Otherwise, it's a checkpoint
+        totalCheckpoints++;
+      }
+    });
+  });
+  
+  // Format dates
+  const createdAtDate = new Date(courier.createdAt);
+  const userCreatedAt = createdAtDate.toISOString().split('T')[0];
+  const userCreatedTime = createdAtDate.toTimeString().split(' ')[0];
+  
+  // Return response in format expected by courier agent
+  res.json({
+    status: 'Success',
+    userId: courier.id,
+    userEmail: courier.email,
+    userName: courier.name,
+    userRole: courier.role,
+    userStatus: 'active',
+    userCreatedAt: userCreatedAt,
+    userCreatedTime: userCreatedTime,
+    userUpdatedAt: userCreatedAt, // Using createdAt as updatedAt since we don't have updatedAt field
+    totalDeliveries: totalDeliveries,
+    totalCheckpoints: totalCheckpoints,
+    totalStatusUpdates: totalStatusUpdates,
+    deliveriesByStatus: deliveriesByStatus,
+    deliveriesByPriority: deliveriesByPriority,
+    recentDeliveriesLast30Days: recentDeliveriesLast30Days,
+    recentDeliveredLast30Days: recentDeliveredLast30Days,
+    createdDeliveries: deliveriesByStatus.CREATED,
+    assignedDeliveries: deliveriesByStatus.ASSIGNED,
+    inTransitDeliveries: deliveriesByStatus.IN_TRANSIT,
+    outForDeliveryDeliveries: deliveriesByStatus.OUT_FOR_DELIVERY,
+    deliveredDeliveries: deliveriesByStatus.DELIVERED,
+    cancelledDeliveries: deliveriesByStatus.CANCELLED,
+    failedDeliveries: deliveriesByStatus.FAILED_DELIVERY,
+    returnedDeliveries: deliveriesByStatus.RETURNED
+  });
+});
+
 module.exports = router;
 

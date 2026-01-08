@@ -213,5 +213,173 @@ router.post('/agent/dispatcher/deliveries', requireAuth, requireRoles('DISPATCHE
   });
 });
 
+// POST /agent/dispatcher-profile - Get dispatcher profile details with assignment statistics (requires DISPATCHER role)
+router.post('/agent/dispatcher-profile', requireAuth, requireRoles('DISPATCHER', 'ADMIN'), async (req, res) => {
+  const dispatcherId = req.user.id;
+  
+  // Get dispatcher user information
+  const dispatcher = await prisma.user.findUnique({
+    where: { id: dispatcherId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true
+    }
+  });
+  
+  if (!dispatcher) {
+    throw new AppError(404, 'Dispatcher not found');
+  }
+  
+  // Calculate date for last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // Get all assignments made by this dispatcher (via events where type is ASSIGNED and createdBy is dispatcher)
+  const assignmentEvents = await prisma.deliveryEvent.findMany({
+    where: {
+      type: 'ASSIGNED',
+      createdById: dispatcherId
+    },
+    include: {
+      delivery: {
+        select: {
+          id: true,
+          status: true,
+          priority: true,
+          createdAt: true,
+          trackingCode: true
+        }
+      }
+    }
+  });
+  
+  // Get all deliveries that have been assigned (to get full statistics)
+  const allDeliveries = await prisma.delivery.findMany({
+    where: {
+      assignments: {
+        some: {}
+      }
+    },
+    include: {
+      assignments: {
+        include: {
+          courier: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      },
+      events: {
+        where: {
+          type: 'ASSIGNED',
+          createdById: dispatcherId
+        }
+      }
+    }
+  });
+  
+  // Filter deliveries that were assigned by this dispatcher
+  const dispatcherAssignedDeliveries = allDeliveries.filter(delivery => 
+    delivery.events.some(event => event.createdById === dispatcherId)
+  );
+  
+  // Calculate statistics
+  const totalAssignments = assignmentEvents.length;
+  
+  // Count by status for assigned deliveries
+  const deliveriesByStatus = {
+    CREATED: 0,
+    ASSIGNED: 0,
+    PICKED_UP: 0,
+    IN_TRANSIT: 0,
+    OUT_FOR_DELIVERY: 0,
+    DELIVERED: 0,
+    CANCELLED: 0,
+    FAILED_DELIVERY: 0,
+    RETURNED: 0
+  };
+  
+  // Count by priority
+  const deliveriesByPriority = {
+    LOW: 0,
+    MEDIUM: 0,
+    HIGH: 0
+  };
+  
+  // Count recent assignments (last 30 days)
+  let recentAssignmentsLast30Days = 0;
+  let recentDeliveredLast30Days = 0;
+  let recentAssignedLast30Days = 0;
+  
+  dispatcherAssignedDeliveries.forEach(delivery => {
+    // Count by status
+    if (deliveriesByStatus.hasOwnProperty(delivery.status)) {
+      deliveriesByStatus[delivery.status]++;
+    }
+    
+    // Count by priority
+    if (deliveriesByPriority.hasOwnProperty(delivery.priority)) {
+      deliveriesByPriority[delivery.priority]++;
+    }
+    
+    // Count recent assignments
+    const assignmentEvent = delivery.events.find(e => e.createdById === dispatcherId);
+    if (assignmentEvent && new Date(assignmentEvent.createdAt) >= thirtyDaysAgo) {
+      recentAssignedLast30Days++;
+      if (delivery.status === 'DELIVERED') {
+        recentDeliveredLast30Days++;
+      }
+    }
+  });
+  
+  // Get unique couriers assigned
+  const uniqueCouriers = new Set();
+  dispatcherAssignedDeliveries.forEach(delivery => {
+    delivery.assignments.forEach(assignment => {
+      if (assignment.courier) {
+        uniqueCouriers.add(assignment.courier.id);
+      }
+    });
+  });
+  
+  // Format dates
+  const createdAtDate = new Date(dispatcher.createdAt);
+  const userCreatedAt = createdAtDate.toISOString().split('T')[0];
+  const userCreatedTime = createdAtDate.toTimeString().split(' ')[0];
+  
+  // Return response in format expected by dispatcher agent
+  res.json({
+    status: 'Success',
+    userId: dispatcher.id,
+    userEmail: dispatcher.email,
+    userName: dispatcher.name,
+    userRole: dispatcher.role,
+    userStatus: 'active',
+    userCreatedAt: userCreatedAt,
+    userCreatedTime: userCreatedTime,
+    userUpdatedAt: userCreatedAt, // Using createdAt as updatedAt since we don't have updatedAt field
+    totalAssignments: totalAssignments,
+    uniqueCouriersAssigned: uniqueCouriers.size,
+    deliveriesByStatus: deliveriesByStatus,
+    deliveriesByPriority: deliveriesByPriority,
+    recentAssignmentsLast30Days: recentAssignedLast30Days,
+    recentDeliveredLast30Days: recentDeliveredLast30Days,
+    createdDeliveries: deliveriesByStatus.CREATED,
+    assignedDeliveries: deliveriesByStatus.ASSIGNED,
+    inTransitDeliveries: deliveriesByStatus.IN_TRANSIT,
+    outForDeliveryDeliveries: deliveriesByStatus.OUT_FOR_DELIVERY,
+    deliveredDeliveries: deliveriesByStatus.DELIVERED,
+    cancelledDeliveries: deliveriesByStatus.CANCELLED,
+    failedDeliveries: deliveriesByStatus.FAILED_DELIVERY,
+    returnedDeliveries: deliveriesByStatus.RETURNED
+  });
+});
+
 module.exports = router;
 
