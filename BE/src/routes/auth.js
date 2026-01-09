@@ -17,6 +17,12 @@ const signToken = (user) =>
 
 router.post('/register', validateBody(registerSchema), async (req, res) => {
   const { name, email, password, role, phone } = req.body;
+  
+  // Prevent ADMIN role registration
+  if (role === 'ADMIN') {
+    throw new AppError(403, 'Admin role cannot be created through registration');
+  }
+  
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) throw new AppError(400, 'Email already registered');
   const hashed = await bcrypt.hash(password, 10);

@@ -33,14 +33,12 @@ export default function RegisterPage() {
       let redirectUrl = '/dashboard/sender';
       
       if (data.user?.id) {
-        if (data.user.role === 'SENDER' || (data.user.role === 'ADMIN' && !data.user.role)) {
+        if (data.user.role === 'SENDER') {
           redirectUrl = `/sender/${data.user.id}`;
         } else if (data.user.role === 'DISPATCHER') {
           redirectUrl = `/dashboard/dispatcher/${data.user.id}`;
         } else if (data.user.role === 'COURIER') {
           redirectUrl = `/dashboard/courier/${data.user.id}`;
-        } else if (data.user.role === 'ADMIN') {
-          redirectUrl = '/admin';
         }
       }
       
@@ -111,7 +109,7 @@ export default function RegisterPage() {
             onChange={(e) => setForm({ ...form, role: e.target.value })}
             fullWidth
           >
-            {['SENDER', 'DISPATCHER', 'COURIER', 'ADMIN'].map((role) => (
+            {['SENDER', 'DISPATCHER', 'COURIER'].map((role) => (
               <MenuItem key={role} value={role}>
                 {role}
               </MenuItem>

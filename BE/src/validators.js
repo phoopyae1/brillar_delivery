@@ -18,7 +18,10 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
-  role: roleEnum,
+  role: z.enum(['SENDER', 'DISPATCHER', 'COURIER']).refine(
+    (role) => role !== 'ADMIN',
+    { message: 'Admin role cannot be created through registration' }
+  ),
   phone: z.string().min(5).optional() // Phone number (optional, but recommended for senders)
 });
 
@@ -68,6 +71,13 @@ const senderIdSchema = z.object({
   senderId: z.string().uuid('Invalid sender ID format').optional()
 });
 
+const priceCalculatorSchema = z.object({
+  origin: z.string().min(2, 'Origin country code is required'),
+  destination: z.string().min(2, 'Destination country code is required'),
+  weight: z.number().positive('Weight must be a positive number').or(z.string().transform((val) => parseFloat(val)).pipe(z.number().positive())),
+  serviceType: z.enum(['express', 'standard'], { errorMap: () => ({ message: 'Service type must be either "express" or "standard"' }) })
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -77,5 +87,6 @@ module.exports = {
   eventSchema,
   integrationSchema,
   trackingCodeSchema,
-  senderIdSchema
+  senderIdSchema,
+  priceCalculatorSchema
 };

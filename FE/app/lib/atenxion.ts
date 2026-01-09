@@ -36,22 +36,55 @@ function getHeaders(token: string | null): Record<string, string> | null {
 }
 
 // Fetch integration embed from MongoDB filtered by role
+// Works for SENDER, DISPATCHER, COURIER, and ADMIN roles
 export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN'): Promise<Integration | null> {
   try {
-    // Fetch all integrations from MongoDB
-    const allIntegrations = await integrationApi.getAll();
-    console.log('[fetchSenderIntegrationEmbed] Fetched integrations from MongoDB:', allIntegrations.length);
+    const requestedRole = role || 'none';
+    console.log(`[fetchSenderIntegrationEmbed] Fetching integrations for role: ${requestedRole}`);
     
-    // Filter integrations based on role
+    // Validate role if provided
+    if (role && !['SENDER', 'DISPATCHER', 'COURIER', 'ADMIN'].includes(role)) {
+      console.warn(`[fetchSenderIntegrationEmbed] Invalid role provided: ${role}. Valid roles: SENDER, DISPATCHER, COURIER, ADMIN`);
+    }
+    
+    // Fetch integrations from MongoDB - pass role to backend for filtering
+    // Backend uses separate collections: SenderIntegration, CourierIntegration, DispatcherIntegration, AdminIntegration
+    const allIntegrations = await integrationApi.getAll(role);
+    console.log('[fetchSenderIntegrationEmbed] Fetched integrations from MongoDB:', Array.isArray(allIntegrations) ? allIntegrations.length : 0);
+    
+    // Log details about what was fetched
+    if (Array.isArray(allIntegrations) && allIntegrations.length > 0) {
+      console.log('[fetchSenderIntegrationEmbed] First integration details:', {
+        role: allIntegrations[0]?.role,
+        hasContextualKey: !!allIntegrations[0]?.contextualKey,
+        hasIframeScriptTag: !!allIntegrations[0]?.iframeScriptTag
+      });
+    }
+    
+    if (!Array.isArray(allIntegrations) || allIntegrations.length === 0) {
+      console.warn(`[fetchSenderIntegrationEmbed] No integrations found for role: ${requestedRole}`);
+      if (role === 'DISPATCHER') {
+        console.warn('[fetchSenderIntegrationEmbed] 💡 DISPATCHER: Ensure an integration exists in DispatcherIntegration MongoDB collection');
+      } else if (role === 'COURIER') {
+        console.warn('[fetchSenderIntegrationEmbed] 💡 COURIER: Ensure an integration exists in CourierIntegration MongoDB collection');
+      } else if (role === 'ADMIN') {
+        console.warn('[fetchSenderIntegrationEmbed] 💡 ADMIN: Ensure an integration exists in AdminIntegration MongoDB collection');
+      } else if (role === 'SENDER') {
+        console.warn('[fetchSenderIntegrationEmbed] 💡 SENDER: Ensure an integration exists in SenderIntegration MongoDB collection');
+      }
+      return null;
+    }
+    
+    // Additional client-side filtering to ensure role matching (in case backend doesn't filter)
     const filteredIntegrations = allIntegrations.filter((int: Integration) => {
       // If no role is set on integration, show it to everyone
       if (!int.role) {
         console.log('[fetchSenderIntegrationEmbed] Including integration (no role):', int.contextualKey);
         return true;
       }
-      // If role is provided, show integrations matching that role
+      // If role is provided, show integrations matching that role (case-insensitive comparison)
       if (role) {
-        const matches = int.role === role;
+        const matches = int.role.toUpperCase() === role.toUpperCase();
         console.log(`[fetchSenderIntegrationEmbed] Integration ${int.contextualKey} (role: ${int.role}) matches requested role (${role}):`, matches);
         return matches;
       }
@@ -59,26 +92,42 @@ export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER'
       return false;
     });
     
-    console.log(`[fetchSenderIntegrationEmbed] Filtered ${filteredIntegrations.length} integrations for role: ${role || 'none'}`);
+    console.log(`[fetchSenderIntegrationEmbed] Filtered ${filteredIntegrations.length} integrations for role: ${requestedRole}`);
     
-    // Find integration - look for one with atenxion widget or use the first one
+    if (filteredIntegrations.length === 0) {
+      console.warn(`[fetchSenderIntegrationEmbed] No integrations match role: ${requestedRole}`);
+      console.warn(`[fetchSenderIntegrationEmbed] Available integrations roles:`, allIntegrations.map((int: Integration) => int.role || 'none'));
+      return null;
+    }
+    
+    // Find integration - prioritize ones with atenxion widget, then use the first one
     const embed = filteredIntegrations.find((int: Integration) => 
       int.iframeScriptTag?.includes('atenxion') || 
       int.iframeScriptTag?.includes('widget')
     ) || filteredIntegrations[0] || null;
     
-    console.log('[fetchSenderIntegrationEmbed] Selected embed:', embed?.contextualKey || 'none');
+    if (embed) {
+      console.log(`[fetchSenderIntegrationEmbed] ✓ Selected embed for ${requestedRole}:`, {
+        contextualKey: embed.contextualKey ? embed.contextualKey.substring(0, 30) + '...' : 'none',
+        role: embed.role || 'none',
+        hasIframeScriptTag: !!embed.iframeScriptTag,
+        contextualKeyLength: embed.contextualKey?.length || 0
+      });
+    } else {
+      console.warn('[fetchSenderIntegrationEmbed] ✗ No embed selected from filtered integrations');
+    }
     
     return embed;
   } catch (error) {
-    console.error('[fetchSenderIntegrationEmbed] Error fetching integrations from MongoDB:', error);
+    console.error(`[fetchSenderIntegrationEmbed] Error fetching integrations for role ${role || 'none'}:`, error);
+    if (error instanceof Error) {
+      console.error('[fetchSenderIntegrationEmbed] Error message:', error.message);
+      console.error('[fetchSenderIntegrationEmbed] Error stack:', error.stack);
+    }
     return null;
   }
 }
 
-// Normalize sender credentials (following the pattern from normalizeCredentials)
-// Note: authToken parameter is for integration API calls, not for Authorization header
-// Authorization header always uses token from sender_session in localStorage
 function normalizeSenderCredentials(
   credentials: AtenxionSenderCredentials,
   authToken?: string | null // This is for integration API (contextualKey), not for Authorization header
@@ -226,7 +275,7 @@ export async function loginAtenxionSender(
   
   const url = `${baseUrl}/api/post-login/user-login`;
   console.log("Atenxion sender login URL:", url);
-
+console.log('token', token);
   let resolvedToken = token;
 
   // Determine role from parameter or default to SENDER

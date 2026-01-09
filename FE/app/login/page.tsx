@@ -58,22 +58,21 @@ export default function LoginPage() {
       if (userIdToUse) {
         try {
           // Fetch contextKey from MongoDB integration filtered by user role
-          let contextKey: string | null = null;
-          try {
-            const role = data.user?.role;
-            const embed = await fetchSenderIntegrationEmbed(role);
-            contextKey = embed?.contextualKey || null;
-            console.log('[Login] Fetched contextKey from MongoDB:', contextKey ? contextKey.substring(0, 50) + '...' : 'none');
-          } catch (integrationError) {
-            console.warn('[Login] Error fetching integration for contextKey:', integrationError);
-          }
+          // let contextKey: string | null = null;
+          // try {
+          //   const role = data.user?.role;
+          //   const embed = await fetchSenderIntegrationEmbed(role);
+          //   contextKey = embed?.contextualKey || null;
+          //   console.log('[Login] Fetched contextKey from MongoDB:', contextKey ? contextKey.substring(0, 50) + '...' : 'none');
+          // } catch (integrationError) {
+          //   console.warn('[Login] Error fetching integration for contextKey:', integrationError);
+          // }
 
           await loginAtenxionSender(
             {
               userId: userIdToUse, // Use userId from session
             },
-            // data.user,
-            contextKey
+            // contextKey
           );
           console.log('Atenxion sender login completed');
         } catch (atenxionError) {
@@ -83,7 +82,6 @@ export default function LoginPage() {
       }
       
       // Route based on role if available, otherwise default to sender dashboard with ID
-      // Use window.location.href for full page refresh
       const role = data.user?.role;
       let redirectUrl = '/dashboard/sender';
       
@@ -98,7 +96,7 @@ export default function LoginPage() {
         redirectUrl = `/sender/${data.user.id}`;
       }
       
-      // Force full page refresh after login
+      // Force full page refresh for all roles
       window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.message);
