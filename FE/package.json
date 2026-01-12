@@ -17,8 +17,10 @@
     "@mui/material": "^5.15.20",
     "@mui/material-nextjs": "^5.15.20",
     "@mui/x-data-grid": "^7.6.3",
+    "@types/qrcode": "^1.5.6",
     "axios": "^1.13.2",
     "next": "14.2.5",
+    "qrcode": "^1.5.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "swr": "^2.2.5"

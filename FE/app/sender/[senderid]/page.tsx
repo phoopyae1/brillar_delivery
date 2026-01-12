@@ -72,6 +72,21 @@ export default function SenderDashboardById() {
   const handleCreate = async () => {
     if (!token) return;
     setSubmitError('');
+    
+    // Client-side validation
+    if (!form.receiverName || form.receiverName.length < 2) {
+      setSubmitError('Receiver name must be at least 2 characters');
+      return;
+    }
+    if (!form.receiverPhone || form.receiverPhone.length < 5) {
+      setSubmitError('Receiver phone must be at least 5 characters');
+      return;
+    }
+    if (!form.destinationAddress || form.destinationAddress.length < 5) {
+      setSubmitError('Destination address must be at least 5 characters');
+      return;
+    }
+    
     try {
       await deliveryApi.create(token, {
         ...form,
@@ -79,8 +94,19 @@ export default function SenderDashboardById() {
       });
       await mutate();
       setPage(1); // Reset to first page after creating new delivery
+      // Reset form after successful creation
+      setForm({
+        title: 'Office Package',
+        description: 'Documents',
+        priority: 'MEDIUM',
+        receiverName: 'Recipient',
+        receiverPhone: '555-0100',
+        destinationAddress: '123 Office St'
+      });
     } catch (e: any) {
-      setSubmitError(e.message);
+      // Show detailed validation error if available
+      const errorMessage = e.response?.data?.error || e.response?.data?.message || e.message || 'Failed to create delivery';
+      setSubmitError(errorMessage);
     }
   };
 

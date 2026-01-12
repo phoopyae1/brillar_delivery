@@ -31,12 +31,40 @@ const loginSchema = z.object({
 });
 
 const createDeliverySchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(3),
+  // Basic delivery info
+  title: z.string().min(3).optional(),
+  description: z.string().min(3).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+  
+  // Receiver info
   receiverName: z.string().min(2),
   receiverPhone: z.string().min(5),
-  destinationAddress: z.string().min(5)
+  destinationAddress: z.string().min(5),
+  recipientPostalCode: z.string().optional(),
+  destinationCountry: z.string().optional(),
+  
+  // Sender info (optional - can use authenticated user)
+  senderName: z.string().optional(),
+  senderEmail: z.string().email().optional(),
+  senderPhone: z.string().optional(),
+  senderAddress: z.string().optional(),
+  senderPostalCode: z.string().optional(),
+  originCountry: z.string().optional(),
+  
+  // Shipment details
+  shipmentType: z.enum(['documents', 'packages']).optional(),
+  documentType: z.string().optional(),
+  packageSize: z.string().optional(),
+  quantity: z.number().int().positive().optional(),
+  weight: z.number().positive().optional(),
+  serviceType: z.enum(['express', 'standard']).optional(),
+  
+  // Payment and schedule
+  paymentMethod: z.string().optional(),
+  preferredDate: z.string().optional(),
+  preferredTime: z.string().optional(),
+  calculatedPrice: z.number().optional(),
+  deliveryDays: z.number().optional()
 });
 
 const statusUpdateSchema = z.object({

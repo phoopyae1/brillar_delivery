@@ -236,6 +236,15 @@ router.post(
 
 router.get('/deliveries', requireAuth, requireRoles('ADMIN', 'DISPATCHER'), async (req, res) => {
   const deliveries = await prisma.delivery.findMany({ include: includeDeliveryRelations, orderBy: { createdAt: 'desc' } });
+  console.log(`[Dispatcher API] Returning ${deliveries.length} deliveries to dispatcher ${req.user.id}`);
+  if (deliveries.length > 0) {
+    console.log(`[Dispatcher API] Sample delivery:`, {
+      id: deliveries[0].id,
+      trackingCode: deliveries[0].trackingCode,
+      status: deliveries[0].status,
+      title: deliveries[0].title
+    });
+  }
   res.json(deliveries);
 });
 

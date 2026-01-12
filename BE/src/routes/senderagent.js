@@ -19,81 +19,192 @@ const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, user
 
 // POST /agent/deliveries - Create delivery via sender agent API (requires SENDER role)
 router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBody(createDeliverySchema), async (req, res) => {
-  const senderId = req.user.id;
-  const trackingCode = generateTrackingCode();
-  
-  // Get sender details for PDF (include phone)
-  const sender = await prisma.user.findUnique({ 
-    where: { id: senderId },
-    select: { id: true, name: true, email: true, phone: true, role: true }
-  });
-  
-  const delivery = await prisma.delivery.create({
-    data: {
-      ...req.body,
-      senderId,
-      trackingCode,
-      status: 'CREATED'
-    }
-  });
-  
-  // Generate PDF with QR code
   try {
-    console.log('[Sender Agent API] Generating PDF for delivery:', delivery.trackingCode);
-    const pdfFileName = await generateDeliveryPDF(delivery, sender);
-    console.log('[Sender Agent API] PDF generated, updating delivery with filename:', pdfFileName);
-    const updated = await prisma.delivery.update({
-      where: { id: delivery.id },
-      data: { pdfUrl: pdfFileName }
+    const senderId = req.user.id;
+    const trackingCode = generateTrackingCode();
+    
+    console.log('[Sender Agent API] Creating delivery for sender:', senderId);
+    console.log('[Sender Agent API] Request body:', req.body);
+    
+    // Get sender details for PDF (include phone)
+    const sender = await prisma.user.findUnique({ 
+      where: { id: senderId },
+      select: { id: true, name: true, email: true, phone: true, role: true }
     });
-    delivery.pdfUrl = updated.pdfUrl;
-  } catch (error) {
-    console.error('[Sender Agent API] Error generating PDF:', error);
-    console.error('[Sender Agent API] Error stack:', error.stack);
-    // Continue even if PDF generation fails - delivery is still created
-  }
-  
-  await createEvent({ deliveryId: delivery.id, type: 'CREATED', note: 'Delivery created via sender agent', userId: senderId });
-  
-  // Create transaction via Atenxion API (non-blocking)
-  createTransaction(senderId, {
-    type: 'DELIVERY_CREATED',
-    deliveryId: delivery.id,
-    trackingCode: delivery.trackingCode,
-    title: delivery.title,
-    status: delivery.status,
-    priority: delivery.priority,
-    createdAt: delivery.createdAt
-  }, 'SENDER').catch(err => {
-    console.error('[Sender Agent] Failed to create transaction:', err);
-  });
-  
-  // Get full delivery details with relations
-  const deliveryWithDetails = await prisma.delivery.findUnique({
-    where: { id: delivery.id },
-    include: {
-      sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
-      assignments: { 
-        include: { 
-          courier: { select: { id: true, name: true, email: true, role: true } } 
-        }, 
-        orderBy: { assignedAt: 'desc' } 
-      },
-      events: { 
-        include: { 
-          createdBy: { select: { id: true, name: true, phone: true, role: true } } 
-        }, 
-        orderBy: { createdAt: 'asc' } 
+    
+    if (!sender) {
+      console.error('[Sender Agent API] Sender not found:', senderId);
+      return res.status(404).json({
+        success: false,
+        error: 'Sender not found'
+      });
+    }
+    
+    // Build title and description from form data if not provided
+    let title = req.body.title;
+    let description = req.body.description;
+    
+    if (!title) {
+      if (req.body.shipmentType === 'documents') {
+        title = `${req.body.documentType || 'Document'} - ${req.body.quantity || 1} item(s)`;
+      } else {
+        title = `Package - ${req.body.packageSize || 'Standard'} - ${req.body.quantity || 1} item(s)`;
       }
     }
-  });
-  
-  // Return response in format expected by sender agent
-  res.status(201).json({
-    success: true,
-    message: 'Delivery created successfully',
-    data: deliveryWithDetails
-  });
+    
+    if (!description) {
+      const descriptionParts = [];
+      
+      // Shipment type details
+      if (req.body.shipmentType === 'documents') {
+        descriptionParts.push(`Type: Document`);
+        if (req.body.documentType) descriptionParts.push(`Document Type: ${req.body.documentType}`);
+      } else {
+        descriptionParts.push(`Type: Package`);
+        if (req.body.packageSize) descriptionParts.push(`Package Size: ${req.body.packageSize}`);
+      }
+      
+      if (req.body.quantity) descriptionParts.push(`Quantity: ${req.body.quantity}`);
+      if (req.body.weight) descriptionParts.push(`Weight: ${req.body.weight}kg`);
+      if (req.body.originCountry) descriptionParts.push(`Origin: ${req.body.originCountry}`);
+      if (req.body.destinationCountry) descriptionParts.push(`Destination: ${req.body.destinationCountry}`);
+      if (req.body.serviceType) descriptionParts.push(`Service: ${req.body.serviceType}`);
+      if (req.body.paymentMethod) descriptionParts.push(`Payment: ${req.body.paymentMethod}`);
+      if (req.body.preferredDate) descriptionParts.push(`Preferred Date: ${req.body.preferredDate}`);
+      if (req.body.preferredTime) descriptionParts.push(`Preferred Time: ${req.body.preferredTime}`);
+      if (req.body.calculatedPrice) descriptionParts.push(`Price: $${req.body.calculatedPrice.toFixed(2)} USD`);
+      if (req.body.deliveryDays) descriptionParts.push(`Estimated Delivery: ${req.body.deliveryDays} day(s)`);
+      
+      // Sender info
+      if (req.body.senderAddress) {
+        descriptionParts.push(`Sender Address: ${req.body.senderAddress}`);
+        if (req.body.senderPostalCode) descriptionParts.push(`Sender Postal: ${req.body.senderPostalCode}`);
+      }
+      
+      // Receiver info
+      if (req.body.recipientPostalCode) {
+        descriptionParts.push(`Receiver Postal: ${req.body.recipientPostalCode}`);
+      }
+      
+      description = descriptionParts.join(' | ') || 'Delivery shipment';
+    }
+    
+    // Build full destination address
+    let destinationAddress = req.body.destinationAddress;
+    if (req.body.recipientPostalCode) {
+      destinationAddress = `${req.body.destinationAddress}, ${req.body.recipientPostalCode}`;
+    }
+    if (req.body.destinationCountry) {
+      destinationAddress = `${destinationAddress}, ${req.body.destinationCountry}`;
+    }
+    
+    // Create delivery in database with only allowed fields
+    const delivery = await prisma.delivery.create({
+      data: {
+        title,
+        description,
+        priority: req.body.priority || 'MEDIUM',
+        receiverName: req.body.receiverName,
+        receiverPhone: req.body.receiverPhone,
+        destinationAddress: destinationAddress,
+        senderId,
+        trackingCode,
+        status: 'CREATED'
+      }
+    });
+    
+    console.log('[Sender Agent API] Delivery saved to database:', {
+      id: delivery.id,
+      trackingCode: delivery.trackingCode,
+      status: delivery.status,
+      title: delivery.title,
+      senderId: delivery.senderId
+    });
+    
+    // Generate PDF with QR code (non-blocking - continue even if it fails)
+    try {
+      console.log('[Sender Agent API] Generating PDF for delivery:', delivery.trackingCode);
+      const pdfFileName = await generateDeliveryPDF(delivery, sender);
+      console.log('[Sender Agent API] PDF generated, updating delivery with filename:', pdfFileName);
+      await prisma.delivery.update({
+        where: { id: delivery.id },
+        data: { pdfUrl: pdfFileName }
+      });
+    } catch (pdfError) {
+      console.error('[Sender Agent API] Error generating PDF (non-critical):', pdfError.message);
+      // Continue even if PDF generation fails - delivery is already saved
+    }
+    
+    // Create delivery event
+    try {
+      await createEvent({ 
+        deliveryId: delivery.id, 
+        type: 'CREATED', 
+        note: 'Delivery created via sender agent', 
+        userId: senderId 
+      });
+      console.log('[Sender Agent API] Delivery event created');
+    } catch (eventError) {
+      console.error('[Sender Agent API] Error creating event (non-critical):', eventError.message);
+      // Continue even if event creation fails - delivery is already saved
+    }
+    
+    // Create transaction via Atenxion API (non-blocking)
+    createTransaction(senderId, {
+      type: 'DELIVERY_CREATED',
+      deliveryId: delivery.id,
+      trackingCode: delivery.trackingCode,
+      title: delivery.title,
+      status: delivery.status,
+      priority: delivery.priority,
+      createdAt: delivery.createdAt
+    }, 'SENDER').catch(err => {
+      console.error('[Sender Agent] Failed to create transaction (non-critical):', err.message);
+    });
+    
+    // Get full delivery details with relations
+    const deliveryWithDetails = await prisma.delivery.findUnique({
+      where: { id: delivery.id },
+      include: {
+        sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
+        assignments: { 
+          include: { 
+            courier: { select: { id: true, name: true, email: true, role: true } } 
+          }, 
+          orderBy: { assignedAt: 'desc' } 
+        },
+        events: { 
+          include: { 
+            createdBy: { select: { id: true, name: true, phone: true, role: true } } 
+          }, 
+          orderBy: { createdAt: 'asc' } 
+        }
+      }
+    });
+    
+    console.log('[Sender Agent API] Delivery creation completed successfully');
+    
+    // Return response in format expected by sender agent
+    res.status(201).json({
+      success: true,
+      message: 'Delivery created successfully',
+      data: deliveryWithDetails
+    });
+  } catch (error) {
+    console.error('[Sender Agent API] Error creating delivery:', error);
+    console.error('[Sender Agent API] Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+    
+    // Return error response
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create delivery',
+      message: error.message || 'An unexpected error occurred'
+    });
+  }
 });
 
 // POST /agent/deliveries/trackingCode - Get delivery details by tracking code (requires SENDER role)

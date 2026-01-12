@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { Refresh } from '@mui/icons-material';
 import { priorityLabels, statusLabels } from '../../../lib/status';
 import { DeliveryEvent } from '../../../lib/api';
 
@@ -33,7 +34,14 @@ export default function DispatcherDashboardById() {
   const dispatcherIdFromUrl = params?.id as string;
   const { user, token, ready } = useAuth();
   const router = useRouter();
-  const { data, error, mutate, isLoading } = useSWR(token ? '/dispatcher/all' : null, () => deliveryApi.adminAll(token!));
+  const { data, error, mutate, isLoading } = useSWR(
+    token ? '/dispatcher/all' : null, 
+    () => deliveryApi.adminAll(token!),
+    {
+      refreshInterval: 5000, // Auto-refresh every 5 seconds to show new deliveries
+      revalidateOnFocus: true, // Refresh when window regains focus
+    }
+  );
   const { data: couriers } = useSWR(token ? '/couriers' : null, () => deliveryApi.getCouriers(token!));
   const [assignment, setAssignment] = useState({ id: '', courierId: '' });
   const [assignError, setAssignError] = useState('');
@@ -62,7 +70,24 @@ export default function DispatcherDashboardById() {
     }
   };
 
+  // Debug logging
+  useEffect(() => {
+    if (data) {
+      console.log('[Dispatcher] Total deliveries fetched:', data.length);
+      console.log('[Dispatcher] Delivery statuses:', data.map((d: any) => ({ id: d.id, status: d.status, title: d.title })));
+    }
+    if (error) {
+      console.error('[Dispatcher] Error fetching deliveries:', error);
+    }
+  }, [data, error]);
+
   const unassigned = data?.filter((d: any) => d.status !== 'PICKED_UP' && d.status !== 'DELIVERED') || [];
+  
+  // Debug logging for filtered data
+  useEffect(() => {
+    console.log('[Dispatcher] Unassigned deliveries (after filter):', unassigned.length);
+    console.log('[Dispatcher] Unassigned delivery details:', unassigned.map((d: any) => ({ id: d.id, status: d.status, title: d.title })));
+  }, [unassigned]);
   
   // Pagination logic
   const totalPages = Math.ceil(unassigned.length / itemsPerPage);
@@ -133,16 +158,45 @@ export default function DispatcherDashboardById() {
           >
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                Needs attention
+                Needs attention {data && `(${data.length} total, ${unassigned.length} unassigned)`}
               </Typography>
-              {unassigned.length > 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  Showing {startIndex + 1}-{Math.min(endIndex, unassigned.length)} of {unassigned.length}
-                </Typography>
-              )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                {unassigned.length > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    Showing {startIndex + 1}-{Math.min(endIndex, unassigned.length)} of {unassigned.length}
+                  </Typography>
+                )}
+                <IconButton 
+                  onClick={() => mutate()} 
+                  disabled={isLoading}
+                  sx={{ color: 'primary.main' }}
+                  title="Refresh deliveries"
+                >
+                  <Refresh />
+                </IconButton>
+              </Stack>
             </Stack>
-            {isLoading && <Typography>Loading...</Typography>}
-            {!isLoading && unassigned.length === 0 && <Typography>All deliveries are assigned.</Typography>}
+            {isLoading && <Typography>Loading deliveries...</Typography>}
+            {!isLoading && !error && data && data.length === 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                No deliveries found in the system. Create a shipment to see it here.
+              </Alert>
+            )}
+            {!isLoading && !error && data && data.length > 0 && unassigned.length === 0 && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                All {data.length} delivery/deliveries are assigned or completed. No deliveries need attention.
+              </Alert>
+            )}
+            {!isLoading && error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                Failed to load deliveries: {error.message || 'Unknown error'}
+                {error.response && (
+                  <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+                    Status: {error.response.status}
+                  </Typography>
+                )}
+              </Alert>
+            )}
             <Stack spacing={2}>
               {paginatedUnassigned.map((d: any, index: number) => {
                 const isExpanded = expandedDelivery === d.id;

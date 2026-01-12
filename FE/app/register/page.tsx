@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { authApi } from '../lib/api';
-import { Button, Container, Paper, Stack, TextField, Typography, Alert, MenuItem } from '@mui/material';
+import { Button, Container, Paper, Stack, TextField, Typography, Alert, MenuItem, Box } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
+import Image from 'next/image';
 
 export default function RegisterPage() {
   const { setAuth } = useAuth();
@@ -70,9 +71,18 @@ export default function RegisterPage() {
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
         }}
       >
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
-          Register
-        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+          {/* <Image
+            src="/logo.png"
+            alt="Brillar Delivery Logo"
+            width={300}
+            height={350}
+            style={{  marginBottom: 16 }}
+          /> */}
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
+            Register
+          </Typography>
+        </Box>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         <Stack spacing={2} sx={{ mt: 2 }}>
           <TextField 

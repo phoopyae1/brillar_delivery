@@ -3,8 +3,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../prisma');
 const { validateBody } = require('../middleware/validate');
-const { trackingCodeSchema, registerSchema, priceCalculatorSchema } = require('../validators');
+const { trackingCodeSchema, registerSchema, priceCalculatorSchema, createDeliverySchema } = require('../validators');
 const { AppError } = require('../middleware/errorHandler');
+const { generateTrackingCode } = require('../utils/trackingCode');
+const { generateDeliveryPDF } = require('../utils/pdfGenerator');
 
 const router = express.Router();
 
@@ -177,6 +179,225 @@ router.post('/public/agent/price-calculator', validateBody(priceCalculatorSchema
       }
     }
   });
+});
+
+// Helper function to create delivery event
+const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, userId }) =>
+  prisma.deliveryEvent.create({
+    data: { deliveryId, type, note, locationText, proofImageUrl, createdById: userId }
+  });
+
+// POST /public/agent/deliveries - Public API to create delivery shipment (no auth required)
+router.post('/public/agent/deliveries', validateBody(createDeliverySchema), async (req, res) => {
+  try {
+    const trackingCode = generateTrackingCode();
+    
+    console.log('[Public Agent API] Creating delivery shipment');
+    console.log('[Public Agent API] Request body:', req.body);
+    
+    // Find or create sender user based on email
+    let sender;
+    if (req.body.senderEmail) {
+      sender = await prisma.user.findUnique({
+        where: { email: req.body.senderEmail },
+        select: { id: true, name: true, email: true, phone: true, role: true }
+      });
+      
+      // If user doesn't exist, create a guest sender user
+      if (!sender) {
+        // Generate a random password for guest user (they can reset it later)
+        const randomPassword = Math.random().toString(36).slice(-12);
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        
+        sender = await prisma.user.create({
+          data: {
+            name: req.body.senderName || 'Guest User',
+            email: req.body.senderEmail,
+            password: hashedPassword,
+            role: 'SENDER',
+            phone: req.body.senderPhone || null
+          },
+          select: { id: true, name: true, email: true, phone: true, role: true }
+        });
+        
+        console.log('[Public Agent API] Created guest sender user:', sender.id);
+      } else {
+        // Update sender info if provided
+        if (req.body.senderName || req.body.senderPhone) {
+          sender = await prisma.user.update({
+            where: { id: sender.id },
+            data: {
+              ...(req.body.senderName && { name: req.body.senderName }),
+              ...(req.body.senderPhone && { phone: req.body.senderPhone })
+            },
+            select: { id: true, name: true, email: true, phone: true, role: true }
+          });
+        }
+        console.log('[Public Agent API] Using existing sender user:', sender.id);
+      }
+    } else {
+      throw new AppError(400, 'Sender email is required');
+    }
+    
+    // Build title and description from form data if not provided
+    let title = req.body.title;
+    let description = req.body.description;
+    
+    if (!title) {
+      if (req.body.shipmentType === 'documents') {
+        title = `${req.body.documentType || 'Document'} - ${req.body.quantity || 1} item(s)`;
+      } else {
+        title = `Package - ${req.body.packageSize || 'Standard'} - ${req.body.quantity || 1} item(s)`;
+      }
+    }
+    
+    if (!description) {
+      const descriptionParts = [];
+      
+      // Shipment type details
+      if (req.body.shipmentType === 'documents') {
+        descriptionParts.push(`Type: Document`);
+        if (req.body.documentType) descriptionParts.push(`Document Type: ${req.body.documentType}`);
+      } else {
+        descriptionParts.push(`Type: Package`);
+        if (req.body.packageSize) descriptionParts.push(`Package Size: ${req.body.packageSize}`);
+      }
+      
+      if (req.body.quantity) descriptionParts.push(`Quantity: ${req.body.quantity}`);
+      if (req.body.weight) descriptionParts.push(`Weight: ${req.body.weight}kg`);
+      if (req.body.originCountry) descriptionParts.push(`Origin: ${req.body.originCountry}`);
+      if (req.body.destinationCountry) descriptionParts.push(`Destination: ${req.body.destinationCountry}`);
+      if (req.body.serviceType) descriptionParts.push(`Service: ${req.body.serviceType}`);
+      if (req.body.paymentMethod) descriptionParts.push(`Payment: ${req.body.paymentMethod}`);
+      if (req.body.preferredDate) descriptionParts.push(`Preferred Date: ${req.body.preferredDate}`);
+      if (req.body.preferredTime) descriptionParts.push(`Preferred Time: ${req.body.preferredTime}`);
+      if (req.body.calculatedPrice) descriptionParts.push(`Price: $${req.body.calculatedPrice.toFixed(2)} USD`);
+      if (req.body.deliveryDays) descriptionParts.push(`Estimated Delivery: ${req.body.deliveryDays} day(s)`);
+      
+      // Sender info
+      if (req.body.senderAddress) {
+        descriptionParts.push(`Sender Address: ${req.body.senderAddress}`);
+        if (req.body.senderPostalCode) descriptionParts.push(`Sender Postal: ${req.body.senderPostalCode}`);
+      }
+      
+      // Receiver info
+      if (req.body.recipientPostalCode) {
+        descriptionParts.push(`Receiver Postal: ${req.body.recipientPostalCode}`);
+      }
+      
+      description = descriptionParts.join(' | ') || 'Delivery shipment';
+    }
+    
+    // Build full destination address
+    let destinationAddress = req.body.destinationAddress;
+    if (req.body.recipientPostalCode) {
+      destinationAddress = `${req.body.destinationAddress}, ${req.body.recipientPostalCode}`;
+    }
+    if (req.body.destinationCountry) {
+      destinationAddress = `${destinationAddress}, ${req.body.destinationCountry}`;
+    }
+    
+    // Create delivery in database
+    const delivery = await prisma.delivery.create({
+      data: {
+        title,
+        description,
+        priority: req.body.priority || 'MEDIUM',
+        receiverName: req.body.receiverName,
+        receiverPhone: req.body.receiverPhone,
+        destinationAddress: destinationAddress,
+        senderId: sender.id,
+        trackingCode,
+        status: 'CREATED'
+      }
+    });
+    
+    console.log('[Public Agent API] Delivery saved to database:', {
+      id: delivery.id,
+      trackingCode: delivery.trackingCode,
+      status: delivery.status,
+      title: delivery.title,
+      senderId: delivery.senderId
+    });
+    
+    // Generate PDF with QR code (non-blocking - continue even if it fails)
+    try {
+      console.log('[Public Agent API] Generating PDF for delivery:', delivery.trackingCode);
+      const pdfFileName = await generateDeliveryPDF(delivery, sender);
+      console.log('[Public Agent API] PDF generated, updating delivery with filename:', pdfFileName);
+      await prisma.delivery.update({
+        where: { id: delivery.id },
+        data: { pdfUrl: pdfFileName }
+      });
+    } catch (pdfError) {
+      console.error('[Public Agent API] Error generating PDF (non-critical):', pdfError.message);
+      // Continue even if PDF generation fails - delivery is already saved
+    }
+    
+    // Create delivery event
+    try {
+      await createEvent({ 
+        deliveryId: delivery.id, 
+        type: 'CREATED', 
+        note: 'Delivery created by public agent', 
+        userId: sender.id 
+      });
+      console.log('[Public Agent API] Delivery event created');
+    } catch (eventError) {
+      console.error('[Public Agent API] Error creating event (non-critical):', eventError.message);
+      // Continue even if event creation fails - delivery is already saved
+    }
+    
+    // Get full delivery details with relations
+    const deliveryWithDetails = await prisma.delivery.findUnique({
+      where: { id: delivery.id },
+      include: {
+        sender: { select: { id: true, name: true, email: true, phone: true, role: true } },
+        assignments: { 
+          include: { 
+            courier: { select: { id: true, name: true, email: true, role: true } } 
+          }, 
+          orderBy: { assignedAt: 'desc' } 
+        },
+        events: { 
+          include: { 
+            createdBy: { select: { id: true, name: true, phone: true, role: true } } 
+          }, 
+          orderBy: { createdAt: 'asc' } 
+        }
+      }
+    });
+    
+    console.log('[Public Agent API] Delivery creation completed successfully');
+    
+    // Return response in format expected by public agent
+    res.status(201).json({
+      success: true,
+      message: 'Delivery created successfully',
+      data: deliveryWithDetails
+    });
+  } catch (error) {
+    console.error('[Public Agent API] Error creating delivery:', error);
+    console.error('[Public Agent API] Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
+    
+    // Return error response
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create delivery',
+      message: error.message || 'An unexpected error occurred'
+    });
+  }
 });
 
 module.exports = router;

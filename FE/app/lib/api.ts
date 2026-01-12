@@ -48,8 +48,12 @@ async function apiFetch(path: string, options: RequestInit = {}, token?: string)
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new Error(error.message || 'Request failed');
+    const error = await res.json().catch(() => ({ message: res.statusText, error: res.statusText }));
+    // Prefer 'error' field, then 'message', then statusText
+    const errorMessage = error.error || error.message || res.statusText || 'Request failed';
+    const apiError: any = new Error(errorMessage);
+    apiError.response = { data: error, status: res.status };
+    throw apiError;
   }
   return res.json();
 }
@@ -127,4 +131,16 @@ export const integrationApi = {
   update: (id: string, data: { contextualKey: string; iframeScriptTag: string; name?: string; role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN' }) =>
     apiFetch(`/integration/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => apiFetch(`/integration/${id}`, { method: 'DELETE' })
+};
+
+export const senderAgentApi = {
+  createDelivery: (token: string, data: { title: string; description: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; receiverName: string; receiverPhone: string; destinationAddress: string }) =>
+    apiFetch('/agent/deliveries', { method: 'POST', body: JSON.stringify(data) }, token),
+  listDeliveries: (token: string, senderId?: string) =>
+    apiFetch('/agent/deliveries/list', { method: 'POST', body: JSON.stringify({ senderId }) }, token)
+};
+
+export const priceCalculatorApi = {
+  calculate: (data: { origin: string; destination: string; weight: number; serviceType: 'express' | 'standard' }) =>
+    apiFetch('/public/agent/price-calculator', { method: 'POST', body: JSON.stringify(data) })
 };

@@ -7,7 +7,16 @@ class AppError extends Error {
 
 const errorHandler = (err, req, res, next) => {
   if (err?.name === 'ZodError') {
-    return res.status(400).json({ message: 'Validation failed', issues: err.flatten() });
+    const issues = err.errors || [];
+    const errorMessages = issues.map(issue => {
+      const path = issue.path.join('.');
+      return `${path}: ${issue.message}`;
+    });
+    return res.status(400).json({ 
+      message: 'Validation failed', 
+      error: errorMessages.join('; '),
+      issues: err.flatten() 
+    });
   }
   
   // Handle MongoDB CastError (invalid ID format)

@@ -6,8 +6,13 @@ import ChatWidget from './components/ChatWidget';
 import { SWRConfig } from 'swr';
 
 export const metadata = {
-  title: 'Brillar Delivery',
-  description: 'Track delivery requests and couriers'
+  title: '',
+  description: 'Track delivery requests and couriers',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

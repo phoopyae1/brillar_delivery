@@ -18,14 +18,23 @@ import {
   ListItemText,
   Divider,
   MenuItem,
-  Pagination
+  Pagination,
+  IconButton
 } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 import { priorityLabels, statusLabels } from '../../lib/status';
 
 export default function DispatcherDashboard() {
   const { user, token, ready } = useAuth();
   const router = useRouter();
-  const { data, error, mutate, isLoading } = useSWR(token ? '/dispatcher/all' : null, () => deliveryApi.adminAll(token!));
+  const { data, error, mutate, isLoading } = useSWR(
+    token ? '/dispatcher/all' : null, 
+    () => deliveryApi.adminAll(token!),
+    {
+      refreshInterval: 5000, // Auto-refresh every 5 seconds to show new deliveries
+      revalidateOnFocus: true, // Refresh when window regains focus
+    }
+  );
   const { data: couriers } = useSWR(token ? '/couriers' : null, () => deliveryApi.getCouriers(token!));
   const [assignment, setAssignment] = useState({ id: '', courierId: '' });
   const [assignError, setAssignError] = useState('');
@@ -126,11 +135,21 @@ export default function DispatcherDashboard() {
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
                 Needs attention
               </Typography>
-              {unassigned.length > 0 && (
-                <Typography variant="body2" color="text.secondary">
-                  Showing {startIndex + 1}-{Math.min(endIndex, unassigned.length)} of {unassigned.length}
-                </Typography>
-              )}
+              <Stack direction="row" spacing={2} alignItems="center">
+                {unassigned.length > 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    Showing {startIndex + 1}-{Math.min(endIndex, unassigned.length)} of {unassigned.length}
+                  </Typography>
+                )}
+                <IconButton 
+                  onClick={() => mutate()} 
+                  disabled={isLoading}
+                  sx={{ color: 'primary.main' }}
+                  title="Refresh deliveries"
+                >
+                  <Refresh />
+                </IconButton>
+              </Stack>
             </Stack>
             {isLoading && <Typography>Loading...</Typography>}
             {!isLoading && unassigned.length === 0 && <Typography>All deliveries are assigned.</Typography>}

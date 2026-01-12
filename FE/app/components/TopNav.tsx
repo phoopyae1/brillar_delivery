@@ -1,7 +1,8 @@
 'use client';
-import { AppBar, Toolbar, Typography, Stack, Button } from '@mui/material';
+import { AppBar, Toolbar, Typography, Stack, Button, Box } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
+import Image from 'next/image';
 
 // Helper function to get sender link with ID
 const getSenderLink = (userId?: number) => {
@@ -12,6 +13,7 @@ const allLinks = [
   { href: '/', label: 'Home', roles: [], logoutOnClick: true }, // Everyone can see Home, logout on click
   { href: '/track/quick', label: 'Track', roles: [], showWhenLoggedIn: false }, // Only show when NOT logged in
   { href: '/price-calculator', label: 'Price Calculator', roles: [] }, // Public link, everyone can see
+  { href: '/create-shipment', label: 'Create Shipment', roles: [] }, // Public link, everyone can create shipments
   { href: '/dashboard/sender', label: 'My Deliveries', roles: ['SENDER', 'ADMIN'], dynamic: true }, // ADMIN has access, will be replaced with /sender/{id}
   { href: '/dashboard/dispatcher', label: 'Dispatcher', roles: ['DISPATCHER', 'ADMIN'] }, // ADMIN has access
   { href: '/dashboard/courier', label: 'Courier', roles: ['COURIER', 'ADMIN'] }, // ADMIN has access, removed DISPATCHER
@@ -67,9 +69,31 @@ export default function TopNav() {
       }}
     >
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', py: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: -0.5 }}>
-          Brillar Delivery
-        </Typography>
+        <Box
+          component="a"
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            window.location.href = '/';
+          }}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            textDecoration: 'none',
+            cursor: 'pointer',
+            '&:hover': {
+              opacity: 0.8
+            }
+          }}
+        >
+          <Image
+            src="/logo.png"
+            alt="Brillar Delivery Logo"
+            width={150}
+            height={80}
+            style={{ objectFit: 'contain' }}
+          />
+        </Box>
         <Stack direction="row" spacing={2} alignItems="center">
           {visibleLinks.map((link) => {
             // Use dynamic sender link with user ID if available

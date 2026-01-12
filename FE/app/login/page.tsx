@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { authApi } from '../lib/api';
-import { Button, Container, Paper, Stack, TextField, Typography, Alert } from '@mui/material';
+import { Button, Container, Paper, Stack, TextField, Typography, Alert, Box } from '@mui/material';
 import { useAuth } from '../hooks/useAuth';
 import { loginAtenxionSender, fetchSenderIntegrationEmbed } from '../lib/atenxion';
 import { integrationApi } from '../lib/api';
+import Image from 'next/image';
 
 interface SenderSession {
   userId: number;
@@ -124,9 +125,18 @@ export default function LoginPage() {
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)'
         }}
       >
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
-          Login
-        </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+          <Image
+            src="/logo.png"
+            alt="Brillar Delivery Logo"
+            width={150}
+            height={150}
+            style={{ objectFit: 'contain', marginBottom: 16 }}
+          />
+          <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
+            Login
+          </Typography>
+        </Box>
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
         <Stack spacing={2} sx={{ mt: 2 }}>
           <TextField 
