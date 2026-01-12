@@ -18,24 +18,190 @@ const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, user
   });
 
 // Pricing structure (base prices in USD)
+// Supported countries: SG (Singapore), TH (Thailand), MM (Myanmar), MY (Malaysia), ID (Indonesia), PH (Philippines), VN (Vietnam), KH (Cambodia), LA (Laos)
 const PRICING = {
-  // Base price per route
+  // Singapore routes
   'SG-TH': { base: 25, perKg: 8, express: 35, standard: 25 },
+  'SG-MM': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'SG-MY': { base: 15, perKg: 5, express: 22, standard: 15 },
+  'SG-ID': { base: 28, perKg: 9, express: 40, standard: 28 },
+  'SG-PH': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'SG-VN': { base: 26, perKg: 8, express: 38, standard: 26 },
+  'SG-KH': { base: 24, perKg: 7, express: 35, standard: 24 },
+  'SG-LA': { base: 27, perKg: 9, express: 40, standard: 27 },
+  
+  // Thailand routes
   'TH-SG': { base: 25, perKg: 8, express: 35, standard: 25 },
   'TH-MM': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'TH-MY': { base: 22, perKg: 7, express: 32, standard: 22 },
+  'TH-ID': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'TH-PH': { base: 35, perKg: 12, express: 52, standard: 35 },
+  'TH-VN': { base: 18, perKg: 5, express: 26, standard: 18 },
+  'TH-KH': { base: 15, perKg: 4, express: 22, standard: 15 },
+  'TH-LA': { base: 16, perKg: 5, express: 24, standard: 16 },
+  
+  // Myanmar routes
+  'MM-SG': { base: 30, perKg: 10, express: 45, standard: 30 },
   'MM-TH': { base: 20, perKg: 6, express: 30, standard: 20 },
-  'SG-MM': { base: 30, perKg: 10, express: 45, standard: 30 },
-  'MM-SG': { base: 30, perKg: 10, express: 45, standard: 30 }
+  'MM-MY': { base: 25, perKg: 8, express: 38, standard: 25 },
+  'MM-ID': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'MM-PH': { base: 38, perKg: 13, express: 57, standard: 38 },
+  'MM-VN': { base: 22, perKg: 7, express: 33, standard: 22 },
+  'MM-KH': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'MM-LA': { base: 18, perKg: 5, express: 27, standard: 18 },
+  
+  // Malaysia routes
+  'MY-SG': { base: 15, perKg: 5, express: 22, standard: 15 },
+  'MY-TH': { base: 22, perKg: 7, express: 32, standard: 22 },
+  'MY-MM': { base: 25, perKg: 8, express: 38, standard: 25 },
+  'MY-ID': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'MY-PH': { base: 28, perKg: 9, express: 42, standard: 28 },
+  'MY-VN': { base: 24, perKg: 8, express: 36, standard: 24 },
+  'MY-KH': { base: 22, perKg: 7, express: 33, standard: 22 },
+  'MY-LA': { base: 23, perKg: 7, express: 35, standard: 23 },
+  
+  // Indonesia routes
+  'ID-SG': { base: 28, perKg: 9, express: 40, standard: 28 },
+  'ID-TH': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'ID-MM': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'ID-MY': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'ID-PH': { base: 25, perKg: 8, express: 38, standard: 25 },
+  'ID-VN': { base: 28, perKg: 9, express: 42, standard: 28 },
+  'ID-KH': { base: 26, perKg: 8, express: 39, standard: 26 },
+  'ID-LA': { base: 27, perKg: 9, express: 41, standard: 27 },
+  
+  // Philippines routes
+  'PH-SG': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'PH-TH': { base: 35, perKg: 12, express: 52, standard: 35 },
+  'PH-MM': { base: 38, perKg: 13, express: 57, standard: 38 },
+  'PH-MY': { base: 28, perKg: 9, express: 42, standard: 28 },
+  'PH-ID': { base: 25, perKg: 8, express: 38, standard: 25 },
+  'PH-VN': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'PH-KH': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'PH-LA': { base: 33, perKg: 11, express: 50, standard: 33 },
+  
+  // Vietnam routes
+  'VN-SG': { base: 26, perKg: 8, express: 38, standard: 26 },
+  'VN-TH': { base: 18, perKg: 5, express: 26, standard: 18 },
+  'VN-MM': { base: 22, perKg: 7, express: 33, standard: 22 },
+  'VN-MY': { base: 24, perKg: 8, express: 36, standard: 24 },
+  'VN-ID': { base: 28, perKg: 9, express: 42, standard: 28 },
+  'VN-PH': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'VN-KH': { base: 12, perKg: 3, express: 18, standard: 12 },
+  'VN-LA': { base: 14, perKg: 4, express: 21, standard: 14 },
+  
+  // Cambodia routes
+  'KH-SG': { base: 24, perKg: 7, express: 35, standard: 24 },
+  'KH-TH': { base: 15, perKg: 4, express: 22, standard: 15 },
+  'KH-MM': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'KH-MY': { base: 22, perKg: 7, express: 33, standard: 22 },
+  'KH-ID': { base: 26, perKg: 8, express: 39, standard: 26 },
+  'KH-PH': { base: 32, perKg: 11, express: 48, standard: 32 },
+  'KH-VN': { base: 12, perKg: 3, express: 18, standard: 12 },
+  'KH-LA': { base: 13, perKg: 4, express: 20, standard: 13 },
+  
+  // Laos routes
+  'LA-SG': { base: 27, perKg: 9, express: 40, standard: 27 },
+  'LA-TH': { base: 16, perKg: 5, express: 24, standard: 16 },
+  'LA-MM': { base: 18, perKg: 5, express: 27, standard: 18 },
+  'LA-MY': { base: 23, perKg: 7, express: 35, standard: 23 },
+  'LA-ID': { base: 27, perKg: 9, express: 41, standard: 27 },
+  'LA-PH': { base: 33, perKg: 11, express: 50, standard: 33 },
+  'LA-VN': { base: 14, perKg: 4, express: 21, standard: 14 },
+  'LA-KH': { base: 13, perKg: 4, express: 20, standard: 13 }
 };
 
 // Estimated delivery times (in days)
 const DELIVERY_TIMES = {
+  // Singapore routes
   'SG-TH': { express: 2, standard: 5 },
+  'SG-MM': { express: 4, standard: 8 },
+  'SG-MY': { express: 1, standard: 3 },
+  'SG-ID': { express: 3, standard: 6 },
+  'SG-PH': { express: 4, standard: 8 },
+  'SG-VN': { express: 3, standard: 6 },
+  'SG-KH': { express: 3, standard: 6 },
+  'SG-LA': { express: 3, standard: 7 },
+  
+  // Thailand routes
   'TH-SG': { express: 2, standard: 5 },
   'TH-MM': { express: 3, standard: 7 },
+  'TH-MY': { express: 3, standard: 6 },
+  'TH-ID': { express: 4, standard: 8 },
+  'TH-PH': { express: 5, standard: 10 },
+  'TH-VN': { express: 2, standard: 5 },
+  'TH-KH': { express: 2, standard: 4 },
+  'TH-LA': { express: 2, standard: 5 },
+  
+  // Myanmar routes
+  'MM-SG': { express: 4, standard: 8 },
   'MM-TH': { express: 3, standard: 7 },
-  'SG-MM': { express: 4, standard: 8 },
-  'MM-SG': { express: 4, standard: 8 }
+  'MM-MY': { express: 4, standard: 8 },
+  'MM-ID': { express: 5, standard: 9 },
+  'MM-PH': { express: 6, standard: 11 },
+  'MM-VN': { express: 4, standard: 7 },
+  'MM-KH': { express: 3, standard: 7 },
+  'MM-LA': { express: 3, standard: 6 },
+  
+  // Malaysia routes
+  'MY-SG': { express: 1, standard: 3 },
+  'MY-TH': { express: 3, standard: 6 },
+  'MY-MM': { express: 4, standard: 8 },
+  'MY-ID': { express: 3, standard: 6 },
+  'MY-PH': { express: 4, standard: 8 },
+  'MY-VN': { express: 3, standard: 7 },
+  'MY-KH': { express: 3, standard: 6 },
+  'MY-LA': { express: 3, standard: 7 },
+  
+  // Indonesia routes
+  'ID-SG': { express: 3, standard: 6 },
+  'ID-TH': { express: 4, standard: 8 },
+  'ID-MM': { express: 5, standard: 9 },
+  'ID-MY': { express: 3, standard: 6 },
+  'ID-PH': { express: 3, standard: 7 },
+  'ID-VN': { express: 4, standard: 8 },
+  'ID-KH': { express: 4, standard: 8 },
+  'ID-LA': { express: 4, standard: 8 },
+  
+  // Philippines routes
+  'PH-SG': { express: 4, standard: 8 },
+  'PH-TH': { express: 5, standard: 10 },
+  'PH-MM': { express: 6, standard: 11 },
+  'PH-MY': { express: 4, standard: 8 },
+  'PH-ID': { express: 3, standard: 7 },
+  'PH-VN': { express: 4, standard: 9 },
+  'PH-KH': { express: 5, standard: 9 },
+  'PH-LA': { express: 5, standard: 10 },
+  
+  // Vietnam routes
+  'VN-SG': { express: 3, standard: 6 },
+  'VN-TH': { express: 2, standard: 5 },
+  'VN-MM': { express: 4, standard: 7 },
+  'VN-MY': { express: 3, standard: 7 },
+  'VN-ID': { express: 4, standard: 8 },
+  'VN-PH': { express: 4, standard: 9 },
+  'VN-KH': { express: 2, standard: 4 },
+  'VN-LA': { express: 2, standard: 5 },
+  
+  // Cambodia routes
+  'KH-SG': { express: 3, standard: 6 },
+  'KH-TH': { express: 2, standard: 4 },
+  'KH-MM': { express: 3, standard: 7 },
+  'KH-MY': { express: 3, standard: 6 },
+  'KH-ID': { express: 4, standard: 8 },
+  'KH-PH': { express: 5, standard: 9 },
+  'KH-VN': { express: 2, standard: 4 },
+  'KH-LA': { express: 2, standard: 4 },
+  
+  // Laos routes
+  'LA-SG': { express: 3, standard: 7 },
+  'LA-TH': { express: 2, standard: 5 },
+  'LA-MM': { express: 3, standard: 6 },
+  'LA-MY': { express: 3, standard: 7 },
+  'LA-ID': { express: 4, standard: 8 },
+  'LA-PH': { express: 5, standard: 10 },
+  'LA-VN': { express: 2, standard: 5 },
+  'LA-KH': { express: 2, standard: 4 }
 };
 
 // Helper function to calculate delivery price
