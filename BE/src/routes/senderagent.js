@@ -17,14 +17,81 @@ const createEvent = ({ deliveryId, type, note, locationText, proofImageUrl, user
     data: { deliveryId, type, note, locationText, proofImageUrl, createdById: userId }
   });
 
+// Pricing structure (base prices in USD)
+const PRICING = {
+  // Base price per route
+  'SG-TH': { base: 25, perKg: 8, express: 35, standard: 25 },
+  'TH-SG': { base: 25, perKg: 8, express: 35, standard: 25 },
+  'TH-MM': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'MM-TH': { base: 20, perKg: 6, express: 30, standard: 20 },
+  'SG-MM': { base: 30, perKg: 10, express: 45, standard: 30 },
+  'MM-SG': { base: 30, perKg: 10, express: 45, standard: 30 }
+};
+
+// Estimated delivery times (in days)
+const DELIVERY_TIMES = {
+  'SG-TH': { express: 2, standard: 5 },
+  'TH-SG': { express: 2, standard: 5 },
+  'TH-MM': { express: 3, standard: 7 },
+  'MM-TH': { express: 3, standard: 7 },
+  'SG-MM': { express: 4, standard: 8 },
+  'MM-SG': { express: 4, standard: 8 }
+};
+
+// Helper function to calculate delivery price
+const calculateDeliveryPrice = ({ originCountry, destinationCountry, weight, quantity = 1, serviceType = 'standard' }) => {
+  // Validate that origin and destination are provided
+  if (!originCountry || !destinationCountry) {
+    return null;
+  }
+
+  // Validate that origin and destination are different
+  if (originCountry === destinationCountry) {
+    return null;
+  }
+
+  // Build route key (e.g., 'SG-TH', 'TH-MM')
+  const routeKey = `${originCountry}-${destinationCountry}`;
+
+  // Validate that the route is supported
+  if (!PRICING[routeKey] || !DELIVERY_TIMES[routeKey]) {
+    return null;
+  }
+
+  // Get pricing for the route
+  const routePricing = PRICING[routeKey];
+
+  // Calculate price per item
+  const weightNum = typeof weight === 'string' ? parseFloat(weight) : (weight || 1);
+  const basePrice = serviceType === 'express' ? routePricing.express : routePricing.standard;
+  const pricePerItem = basePrice + (routePricing.perKg * Math.max(0, weightNum - 1)); // First kg included
+
+  // Multiply by quantity
+  const totalPrice = pricePerItem * (quantity || 1);
+
+  // Get delivery days
+  const routeDelivery = DELIVERY_TIMES[routeKey];
+  const deliveryDays = serviceType === 'express' ? routeDelivery.express : routeDelivery.standard;
+
+  return {
+    price: parseFloat(totalPrice.toFixed(2)),
+    deliveryDays,
+    currency: 'USD'
+  };
+};
+
 // POST /agent/deliveries - Create delivery via sender agent API (requires SENDER role)
 router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBody(createDeliverySchema), async (req, res) => {
   try {
-    const senderId = req.user.id;
+    // Use senderId from request body if provided, otherwise use authenticated user's ID
+    // Note: senderId is a UUID string, not an integer
+    const senderId = req.body.senderId || req.user.id;
+    
     const trackingCode = generateTrackingCode();
     
     console.log('[Sender Agent API] Creating delivery for sender:', senderId);
     console.log('[Sender Agent API] Request body:', req.body);
+    console.log('[Sender Agent API] Using senderId:', senderId);
     
     // Get sender details for PDF (include phone)
     const sender = await prisma.user.findUnique({ 
@@ -36,22 +103,57 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
       console.error('[Sender Agent API] Sender not found:', senderId);
       return res.status(404).json({
         success: false,
-        error: 'Sender not found'
+        error: `Sender not found with ID: ${senderId}`
       });
     }
     
-    // Build title and description from form data if not provided
-    let title = req.body.title;
-    let description = req.body.description;
+    // Verify sender has SENDER role (if senderId was provided in body)
+    if (req.body.senderId && sender.role !== 'SENDER') {
+      console.error('[Sender Agent API] User is not a sender:', sender.role);
+      return res.status(400).json({
+        success: false,
+        error: `User with ID ${senderId} is not a SENDER (role: ${sender.role})`
+      });
+    }
     
-    if (!title) {
-      if (req.body.shipmentType === 'documents') {
-        title = `${req.body.documentType || 'Document'} - ${req.body.quantity || 1} item(s)`;
+    // Auto-calculate price if not provided
+    let calculatedPrice = req.body.calculatedPrice;
+    let deliveryDays = req.body.deliveryDays;
+    
+    if (!calculatedPrice && req.body.originCountry && req.body.destinationCountry) {
+      const priceCalculation = calculateDeliveryPrice({
+        originCountry: req.body.originCountry,
+        destinationCountry: req.body.destinationCountry,
+        weight: req.body.weight || 1,
+        quantity: req.body.quantity || 1,
+        serviceType: req.body.serviceType || 'standard'
+      });
+      
+      if (priceCalculation) {
+        calculatedPrice = priceCalculation.price;
+        if (!deliveryDays) {
+          deliveryDays = priceCalculation.deliveryDays;
+        }
+        console.log('[Sender Agent API] Auto-calculated price:', calculatedPrice, 'USD, Delivery days:', deliveryDays);
       } else {
-        title = `Package - ${req.body.packageSize || 'Standard'} - ${req.body.quantity || 1} item(s)`;
+        console.warn('[Sender Agent API] Could not calculate price - route may not be supported or missing required fields');
       }
     }
     
+    // Build title from form data if not provided
+    let title = req.body.title;
+    if (!title) {
+      if (req.body.shipmentType === 'documents') {
+        title = `${req.body.documentType || 'Document'} - ${req.body.quantity || 1} item(s)`;
+      } else if (req.body.shipmentType === 'packages') {
+        title = `Package - ${req.body.packageSize || 'Standard'} - ${req.body.quantity || 1} item(s)`;
+      } else {
+        title = `Delivery - ${req.body.quantity || 1} item(s)`;
+      }
+    }
+    
+    // Build description from form data if not provided
+    let description = req.body.description;
     if (!description) {
       const descriptionParts = [];
       
@@ -59,7 +161,7 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
       if (req.body.shipmentType === 'documents') {
         descriptionParts.push(`Type: Document`);
         if (req.body.documentType) descriptionParts.push(`Document Type: ${req.body.documentType}`);
-      } else {
+      } else if (req.body.shipmentType === 'packages') {
         descriptionParts.push(`Type: Package`);
         if (req.body.packageSize) descriptionParts.push(`Package Size: ${req.body.packageSize}`);
       }
@@ -72,14 +174,30 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
       if (req.body.paymentMethod) descriptionParts.push(`Payment: ${req.body.paymentMethod}`);
       if (req.body.preferredDate) descriptionParts.push(`Preferred Date: ${req.body.preferredDate}`);
       if (req.body.preferredTime) descriptionParts.push(`Preferred Time: ${req.body.preferredTime}`);
-      if (req.body.calculatedPrice) descriptionParts.push(`Price: $${req.body.calculatedPrice.toFixed(2)} USD`);
-      if (req.body.deliveryDays) descriptionParts.push(`Estimated Delivery: ${req.body.deliveryDays} day(s)`);
+      if (calculatedPrice !== undefined && calculatedPrice !== null) {
+        const price = typeof calculatedPrice === 'number' 
+          ? calculatedPrice 
+          : parseFloat(calculatedPrice);
+        if (!isNaN(price)) {
+          descriptionParts.push(`Price: $${price.toFixed(2)} USD`);
+        }
+      }
+      if (deliveryDays !== undefined && deliveryDays !== null) {
+        const days = typeof deliveryDays === 'number' 
+          ? deliveryDays 
+          : parseInt(deliveryDays);
+        if (!isNaN(days)) {
+          descriptionParts.push(`Estimated Delivery: ${days} day(s)`);
+        }
+      }
       
       // Sender info
       if (req.body.senderAddress) {
         descriptionParts.push(`Sender Address: ${req.body.senderAddress}`);
         if (req.body.senderPostalCode) descriptionParts.push(`Sender Postal: ${req.body.senderPostalCode}`);
       }
+      if (req.body.senderName) descriptionParts.push(`Sender: ${req.body.senderName}`);
+      if (req.body.senderPhone) descriptionParts.push(`Sender Phone: ${req.body.senderPhone}`);
       
       // Receiver info
       if (req.body.recipientPostalCode) {
@@ -89,13 +207,34 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
       description = descriptionParts.join(' | ') || 'Delivery shipment';
     }
     
-    // Build full destination address
+    // Build full destination address from components if needed
     let destinationAddress = req.body.destinationAddress;
-    if (req.body.recipientPostalCode) {
-      destinationAddress = `${req.body.destinationAddress}, ${req.body.recipientPostalCode}`;
+    if (!destinationAddress || destinationAddress.trim() === '') {
+      // Build from components if destinationAddress is not provided
+      const addressParts = [];
+      if (req.body.recipientAddress) addressParts.push(req.body.recipientAddress);
+      if (req.body.recipientPostalCode) addressParts.push(req.body.recipientPostalCode);
+      if (req.body.destinationCountry) addressParts.push(req.body.destinationCountry);
+      destinationAddress = addressParts.join(', ') || req.body.destinationAddress;
+    } else {
+      // Append postal code and country if not already included
+      if (req.body.recipientPostalCode && !destinationAddress.includes(req.body.recipientPostalCode)) {
+        destinationAddress = `${destinationAddress}, ${req.body.recipientPostalCode}`;
+      }
+      if (req.body.destinationCountry && !destinationAddress.includes(req.body.destinationCountry)) {
+        destinationAddress = `${destinationAddress}, ${req.body.destinationCountry}`;
+      }
     }
-    if (req.body.destinationCountry) {
-      destinationAddress = `${destinationAddress}, ${req.body.destinationCountry}`;
+    
+    // Ensure required fields are present
+    const receiverName = req.body.receiverName || req.body.recipientName;
+    const receiverPhone = req.body.receiverPhone || req.body.recipientPhone;
+    
+    if (!receiverName || !receiverPhone || !destinationAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: receiverName, receiverPhone, and destinationAddress are required'
+      });
     }
     
     // Create delivery in database with only allowed fields
@@ -104,8 +243,8 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
         title,
         description,
         priority: req.body.priority || 'MEDIUM',
-        receiverName: req.body.receiverName,
-        receiverPhone: req.body.receiverPhone,
+        receiverName: receiverName,
+        receiverPhone: receiverPhone,
         destinationAddress: destinationAddress,
         senderId,
         trackingCode,
@@ -188,7 +327,12 @@ router.post('/agent/deliveries', requireAuth, requireRoles('SENDER'), validateBo
     res.status(201).json({
       success: true,
       message: 'Delivery created successfully',
-      data: deliveryWithDetails
+      data: {
+        ...deliveryWithDetails,
+        calculatedPrice: calculatedPrice !== undefined && calculatedPrice !== null ? calculatedPrice : null,
+        deliveryDays: deliveryDays !== undefined && deliveryDays !== null ? deliveryDays : null,
+        currency: calculatedPrice !== undefined && calculatedPrice !== null ? 'USD' : null
+      }
     });
   } catch (error) {
     console.error('[Sender Agent API] Error creating delivery:', error);

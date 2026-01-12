@@ -341,13 +341,55 @@ export default function SenderDashboardById() {
         ? `Document Type: ${formData.documentType}, Quantity: ${formData.quantity}, Weight: ${formData.weight}kg`
         : `Package Size: ${formData.packageSize}, Quantity: ${formData.quantity}, Weight: ${formData.weight}kg`;
 
+      // Build destinationAddress properly, filtering out empty values
+      const addressParts = [
+        formData.recipientAddress,
+        formData.recipientPostalCode,
+        formData.destinationCountry
+      ].filter(part => part && part.trim() !== '');
+
+      const builtDestinationAddress = addressParts.length > 0 
+        ? addressParts.join(', ')
+        : formData.recipientAddress || '';
+
       const deliveryData = {
+        // Basic delivery info
         title,
         description,
         priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+        
+        // Receiver info (support both naming conventions)
         receiverName: formData.recipientName,
         receiverPhone: formData.recipientPhone,
-        destinationAddress: `${formData.recipientAddress}, ${formData.recipientPostalCode}, ${formData.destinationCountry}`
+        recipientName: formData.recipientName, // Also send as recipientName for compatibility
+        recipientPhone: formData.recipientPhone, // Also send as recipientPhone for compatibility
+        destinationAddress: builtDestinationAddress,
+        recipientPostalCode: formData.recipientPostalCode,
+        destinationCountry: formData.destinationCountry,
+        recipientAddress: formData.recipientAddress,
+        
+        // Sender info
+        senderName: formData.senderName,
+        senderEmail: formData.senderEmail,
+        senderPhone: formData.senderPhone,
+        senderAddress: formData.senderAddress,
+        senderPostalCode: formData.senderPostalCode,
+        originCountry: formData.originCountry,
+        
+        // Shipment details
+        shipmentType: formData.shipmentType,
+        documentType: formData.documentType,
+        packageSize: formData.packageSize,
+        quantity: formData.quantity,
+        weight: formData.weight,
+        serviceType: formData.serviceType,
+        
+        // Payment and schedule
+        paymentMethod: formData.paymentMethod,
+        preferredDate: formData.preferredDate,
+        preferredTime: formData.preferredTime,
+        calculatedPrice: calculatedPrice,
+        deliveryDays: deliveryDays
       };
 
       const response = await senderAgentApi.createDelivery(token, deliveryData);

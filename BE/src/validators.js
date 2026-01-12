@@ -36,14 +36,18 @@ const createDeliverySchema = z.object({
   description: z.string().min(3).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
   
-  // Receiver info
-  receiverName: z.string().min(2),
-  receiverPhone: z.string().min(5),
-  destinationAddress: z.string().min(5),
+  // Receiver info - support both naming conventions
+  receiverName: z.string().min(2).optional(),
+  receiverPhone: z.string().min(5).optional(),
+  destinationAddress: z.string().min(5).optional(),
+  recipientName: z.string().min(2).optional(), // Alternative to receiverName
+  recipientPhone: z.string().min(5).optional(), // Alternative to receiverPhone
+  recipientAddress: z.string().optional(), // Used to build destinationAddress
   recipientPostalCode: z.string().optional(),
   destinationCountry: z.string().optional(),
   
   // Sender info (optional - can use authenticated user)
+  senderId: z.string().uuid('Invalid sender ID format').optional(),
   senderName: z.string().optional(),
   senderEmail: z.string().email().optional(),
   senderPhone: z.string().optional(),
@@ -65,6 +69,42 @@ const createDeliverySchema = z.object({
   preferredTime: z.string().optional(),
   calculatedPrice: z.number().optional(),
   deliveryDays: z.number().optional()
+}).refine((data) => {
+  // Either destinationAddress must be provided (with min 5 chars), OR recipientAddress must be provided (with min 5 chars)
+  if (data.destinationAddress && data.destinationAddress.trim().length >= 5) {
+    return true;
+  }
+  if (data.recipientAddress && data.recipientAddress.trim().length >= 5) {
+    return true;
+  }
+  return false;
+}, {
+  message: "Either destinationAddress or recipientAddress must be provided with at least 5 characters",
+  path: ["destinationAddress"]
+}).refine((data) => {
+  // Either receiverName or recipientName must be provided
+  if (data.receiverName && data.receiverName.trim().length >= 2) {
+    return true;
+  }
+  if (data.recipientName && data.recipientName.trim().length >= 2) {
+    return true;
+  }
+  return false;
+}, {
+  message: "Either receiverName or recipientName must be provided with at least 2 characters",
+  path: ["receiverName"]
+}).refine((data) => {
+  // Either receiverPhone or recipientPhone must be provided
+  if (data.receiverPhone && data.receiverPhone.trim().length >= 5) {
+    return true;
+  }
+  if (data.recipientPhone && data.recipientPhone.trim().length >= 5) {
+    return true;
+  }
+  return false;
+}, {
+  message: "Either receiverPhone or recipientPhone must be provided with at least 5 characters",
+  path: ["receiverPhone"]
 });
 
 const statusUpdateSchema = z.object({

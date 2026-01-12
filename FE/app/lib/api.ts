@@ -134,7 +134,7 @@ export const integrationApi = {
 };
 
 export const senderAgentApi = {
-  createDelivery: (token: string, data: { title: string; description: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; receiverName: string; receiverPhone: string; destinationAddress: string }) =>
+  createDelivery: (token: string, data: any) =>
     apiFetch('/agent/deliveries', { method: 'POST', body: JSON.stringify(data) }, token),
   listDeliveries: (token: string, senderId?: string) =>
     apiFetch('/agent/deliveries/list', { method: 'POST', body: JSON.stringify({ senderId }) }, token)
