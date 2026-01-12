@@ -17,6 +17,8 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import QueryStatsIcon from '@mui/icons-material/QueryStats';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import BoltIcon from '@mui/icons-material/Bolt';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAuth } from './hooks/useAuth';
 
 const features = [
@@ -131,41 +133,96 @@ export default function HomePage() {
                 borderRadius: 4,
                 bgcolor: 'background.paper',
                 border: '1px solid rgba(201, 162, 39, 0.2)',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center'
               }}
             >
-              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2 }}>
-                Live mission control
-              </Typography>
-              <Stack spacing={2}>
-                {[1, 2, 3].map((item) => (
-                  <Card key={item} variant="outlined" sx={{ borderRadius: 3, borderColor: 'rgba(201, 162, 39, 0.15)', bgcolor: '#1A1A1A' }}>
-                    <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box
-                        sx={{
-                          width: 46,
-                          height: 46,
-                          borderRadius: '14px',
-                          bgcolor: 'primary.light',
-                          display: 'grid',
-                          placeItems: 'center',
-                          color: 'primary.dark'
-                        }}
-                      >
-                        <LocalShippingIcon />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                          Package #{3400 + item}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Courier dispatched • ETA 15 mins
-                        </Typography>
-                      </Box>
-                      <Chip label="On route" color="primary" size="small" sx={{ ml: 'auto' }} />
-                    </CardContent>
-                  </Card>
-                ))}
+              <Stack spacing={4}>
+                <Box>
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                    <Box
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '16px',
+                        bgcolor: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'primary.contrastText'
+                      }}
+                    >
+                      <LocationOnIcon sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        Wide Coverage
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Serving Singapore, Thailand & Myanmar
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                <Box>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <Box
+                      sx={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: '16px',
+                        bgcolor: 'primary.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'primary.contrastText'
+                      }}
+                    >
+                      <AccessTimeIcon sx={{ fontSize: 28 }} />
+                    </Box>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        Express Options
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Standard & Express delivery available
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                {/* <Box
+                  sx={{
+                    mt: 2,
+                    p: 3,
+                    borderRadius: 2,
+                    bgcolor: 'rgba(201, 162, 39, 0.1)',
+                    border: '1px solid rgba(201, 162, 39, 0.2)'
+                  }}
+                >
+                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+                    Ready to ship?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Create your shipment in minutes and track it every step of the way.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => { window.location.href = '/create-shipment'; }}
+                    sx={{
+                      textTransform: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 600
+                    }}
+                  >
+                    Create Shipment
+                  </Button>
+                </Box> */}
               </Stack>
             </Box>
           </Grid>

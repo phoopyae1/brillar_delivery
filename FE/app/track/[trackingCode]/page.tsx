@@ -107,7 +107,10 @@ export default function PublicTrackPage() {
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
                 borderRadius: 3,
                 overflow: 'hidden',
-                mb: 3
+                mb: 3,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
               <Box
@@ -161,7 +164,7 @@ export default function PublicTrackPage() {
                 </Stack>
               </Box>
 
-              <CardContent sx={{ p: 3 }}>
+              <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {/* Description */}
                 {data.description && (
                   <Box sx={{ mb: 3 }}>
@@ -216,7 +219,7 @@ export default function PublicTrackPage() {
                         bgcolor: '#252525',
                         border: '1px solid rgba(201, 162, 39, 0.2)',
                         borderRadius: 2,
-                        height: '100%'
+                        // height: '50%'
                       }}
                     >
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
@@ -328,9 +331,9 @@ export default function PublicTrackPage() {
                 border: '2px solid rgba(201, 162, 39, 0.3)',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
                 borderRadius: 3,
-                height: 'fit-content',
-                position: 'sticky',
-                top: 20
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
               <Box
@@ -347,8 +350,8 @@ export default function PublicTrackPage() {
                   {data.events.length} event{data.events.length !== 1 ? 's' : ''} recorded
                 </Typography>
               </Box>
-              <CardContent sx={{ p: 0 }}>
-                <Box sx={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto', p: 2 }}>
+              <CardContent sx={{ p: 0, flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
                   <Stack spacing={2}>
                     {data.events.length === 0 ? (
                       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>

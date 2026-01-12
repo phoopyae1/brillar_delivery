@@ -109,6 +109,124 @@ router.post('/public/agent/deliveries/trackingCode', validateBody(trackingCodeSc
   });
 });
 
+// POST /public/agent/deliveries/timeline - Public API to get delivery timeline with formatted dates (no auth required)
+router.post('/public/agent/deliveries/timeline', validateBody(trackingCodeSchema), async (req, res) => {
+  try {
+    const trackingCode = req.body.trackingCode;
+    
+    const delivery = await prisma.delivery.findUnique({
+      where: { trackingCode },
+      select: {
+        id: true,
+        trackingCode: true,
+        title: true,
+        status: true,
+        priority: true,
+        createdAt: true,
+        events: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            type: true,
+            note: true,
+            proofImageUrl: true,
+            locationText: true,
+            createdAt: true,
+            createdBy: { select: { name: true, phone: true, role: true } }
+          }
+        }
+      }
+    });
+    
+    if (!delivery) {
+      throw new AppError(404, 'Delivery not found');
+    }
+    
+    // Format timeline events with date and time
+    const timeline = delivery.events.map((event, index) => {
+      const eventDate = new Date(event.createdAt);
+      return {
+        id: event.id,
+        type: event.type,
+        status: event.type, // Alias for consistency
+        note: event.note || null,
+        locationText: event.locationText || null,
+        proofImageUrl: event.proofImageUrl || null,
+        date: eventDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        time: eventDate.toTimeString().split(' ')[0], // HH:MM:SS format
+        dateTime: eventDate.toISOString(), // Full ISO format
+        formattedDate: eventDate.toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }), // e.g., "January 12, 2024"
+        formattedTime: eventDate.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        }), // e.g., "02:30 PM"
+        formattedDateTime: eventDate.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }), // e.g., "January 12, 2024, 02:30 PM"
+        timestamp: eventDate.getTime(), // Unix timestamp
+        isLatest: index === delivery.events.length - 1, // Mark the latest event
+        createdBy: event.createdBy ? {
+          name: event.createdBy.name,
+          phone: event.createdBy.phone,
+          role: event.createdBy.role
+        } : null
+      };
+    });
+    
+    // Return formatted timeline response
+    res.json({
+      success: true,
+      data: {
+        trackingCode: delivery.trackingCode,
+        title: delivery.title,
+        status: delivery.status,
+        priority: delivery.priority,
+        createdAt: delivery.createdAt,
+        formattedCreatedAt: new Date(delivery.createdAt).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        totalEvents: delivery.events.length,
+        timeline: timeline,
+        progress: {
+          currentStep: delivery.events.length > 0 ? delivery.events.length - 1 : 0,
+          totalSteps: delivery.events.length,
+          percentage: delivery.events.length > 0 ? Math.round(((delivery.events.length) / 7) * 100) : 0 // Assuming max 7 steps
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Public Agent API] Error fetching timeline:', error);
+    
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch delivery timeline',
+      message: error.message || 'An unexpected error occurred'
+    });
+  }
+});
+
 // Pricing structure (base prices in USD)
 const PRICING = {
   // Base price per route
