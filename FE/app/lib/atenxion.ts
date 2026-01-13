@@ -36,15 +36,15 @@ function getHeaders(token: string | null): Record<string, string> | null {
 }
 
 // Fetch integration embed from MongoDB filtered by role
-// Works for SENDER, DISPATCHER, COURIER, and ADMIN roles
-export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'ADMIN'): Promise<Integration | null> {
+// Works for SENDER, DISPATCHER, COURIER, PUBLIC, and ADMIN roles
+export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER' | 'COURIER' | 'PUBLIC' | 'ADMIN'): Promise<Integration | null> {
   try {
     const requestedRole = role || 'none';
     console.log(`[fetchSenderIntegrationEmbed] Fetching integrations for role: ${requestedRole}`);
     
     // Validate role if provided
-    if (role && !['SENDER', 'DISPATCHER', 'COURIER', 'ADMIN'].includes(role)) {
-      console.warn(`[fetchSenderIntegrationEmbed] Invalid role provided: ${role}. Valid roles: SENDER, DISPATCHER, COURIER, ADMIN`);
+    if (role && !['SENDER', 'DISPATCHER', 'COURIER', 'PUBLIC', 'ADMIN'].includes(role)) {
+      console.warn(`[fetchSenderIntegrationEmbed] Invalid role provided: ${role}. Valid roles: SENDER, DISPATCHER, COURIER, PUBLIC, ADMIN`);
     }
     
     // Fetch integrations from MongoDB - pass role to backend for filtering
@@ -71,6 +71,8 @@ export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER'
         console.warn('[fetchSenderIntegrationEmbed] 💡 ADMIN: Ensure an integration exists in AdminIntegration MongoDB collection');
       } else if (role === 'SENDER') {
         console.warn('[fetchSenderIntegrationEmbed] 💡 SENDER: Ensure an integration exists in SenderIntegration MongoDB collection');
+      } else if (role === 'PUBLIC') {
+        console.warn('[fetchSenderIntegrationEmbed] 💡 PUBLIC: Ensure an integration exists in PublicIntegration MongoDB collection');
       }
       return null;
     }
@@ -100,18 +102,58 @@ export async function fetchSenderIntegrationEmbed(role?: 'SENDER' | 'DISPATCHER'
       return null;
     }
     
-    // Find integration - prioritize ones with atenxion widget, then use the first one
-    const embed = filteredIntegrations.find((int: Integration) => 
+    // Sort integrations by updatedAt (most recent first), then createdAt (most recent first)
+    // Use _id as final tie-breaker to ensure deterministic sorting
+    // This ensures we always get the latest integration consistently
+    const sortedIntegrations = [...filteredIntegrations].sort((a: Integration, b: Integration) => {
+      const aUpdated = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      
+      // Sort by updatedAt first (descending), then createdAt (descending)
+      if (aUpdated !== bUpdated) {
+        return bUpdated - aUpdated;
+      }
+      if (aCreated !== bCreated) {
+        return bCreated - aCreated;
+      }
+      // Final tie-breaker: use _id or contextualKey for deterministic sorting
+      const aId = a._id || a.contextualKey || '';
+      const bId = b._id || b.contextualKey || '';
+      return aId.localeCompare(bId);
+    });
+    
+    console.log(`[fetchSenderIntegrationEmbed] Sorted integrations by date (most recent first):`, 
+      sortedIntegrations.map((int: Integration) => ({
+        contextualKey: int.contextualKey?.substring(0, 20),
+        updatedAt: int.updatedAt,
+        createdAt: int.createdAt,
+        _id: int._id?.substring(0, 10)
+      }))
+    );
+    
+    // Find integration - prioritize ones with atenxion widget from sorted list
+    // Since list is sorted deterministically, this will always pick the same one
+    // If multiple match, pick the first (most recent) one consistently
+    const embedWithWidget = sortedIntegrations.find((int: Integration) => 
       int.iframeScriptTag?.includes('atenxion') || 
       int.iframeScriptTag?.includes('widget')
-    ) || filteredIntegrations[0] || null;
+    );
+    
+    const embed = embedWithWidget || sortedIntegrations[0] || null;
     
     if (embed) {
       console.log(`[fetchSenderIntegrationEmbed] ✓ Selected embed for ${requestedRole}:`, {
         contextualKey: embed.contextualKey ? embed.contextualKey.substring(0, 30) + '...' : 'none',
         role: embed.role || 'none',
         hasIframeScriptTag: !!embed.iframeScriptTag,
-        contextualKeyLength: embed.contextualKey?.length || 0
+        contextualKeyLength: embed.contextualKey?.length || 0,
+        updatedAt: embed.updatedAt,
+        createdAt: embed.createdAt,
+        _id: embed._id?.substring(0, 10),
+        selectionReason: embedWithWidget ? 'matched widget keyword' : 'most recent (no widget match)',
+        totalAvailable: sortedIntegrations.length
       });
     } else {
       console.warn('[fetchSenderIntegrationEmbed] ✗ No embed selected from filtered integrations');

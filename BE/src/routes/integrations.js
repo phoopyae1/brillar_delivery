@@ -42,8 +42,9 @@ router.get('/integration', async (req, res) => {
     }
     
     // Get latest integration for the specified role from its collection
+    // Sort by updatedAt, createdAt, then _id for deterministic ordering
     const integration = await IntegrationModel.findOne({})
-      .sort({ updatedAt: -1, createdAt: -1 });
+      .sort({ updatedAt: -1, createdAt: -1, _id: -1 });
     
     if (integration) {
       // Add role field to response for compatibility
@@ -55,8 +56,9 @@ router.get('/integration', async (req, res) => {
   }
   
   // If no role specified, return PUBLIC integrations (for non-logged-in users)
+  // Sort by updatedAt, createdAt, then _id for deterministic ordering
   const publicIntegrations = await PublicIntegration.find({})
-    .sort({ updatedAt: -1, createdAt: -1 });
+    .sort({ updatedAt: -1, createdAt: -1, _id: -1 });
   
   // Add role field to each integration for compatibility
   const result = publicIntegrations.map(integration => {
@@ -138,12 +140,12 @@ router.post('/integration', validateBody(integrationSchema), async (req, res) =>
   // Ensure name is set (use contextualKey if not provided or empty)
   const integrationName = (name && name.trim()) ? name.trim() : contextualKey.trim();
   
-  // Check if contextual key already exists in this role's collection
-  const existing = await IntegrationModel.findOne({ contextualKey: contextualKey.trim() });
-  if (existing) {
-    throw new AppError(400, `Integration with this contextual key already exists for role ${role}`);
-  }
+  // Delete all existing integrations for this role to ensure only one exists
+  // This implements a "replace" pattern: one integration per role
+  const deleteResult = await IntegrationModel.deleteMany({});
+  console.log(`[Integration API] Deleted ${deleteResult.deletedCount} existing integration(s) for role ${role}`);
   
+  // Create the new integration (now the only one for this role)
   const integration = new IntegrationModel({
     name: integrationName,
     contextualKey: contextualKey.trim(),
@@ -176,14 +178,11 @@ router.put('/integration/:id', validateBody(integrationSchema), async (req, res)
     throw new AppError(404, 'Integration not found');
   }
   
-  // Check if contextual key is being changed and if it conflicts
-  if (contextualKey !== existing.contextualKey) {
-    const keyExists = await IntegrationModel.findOne({ contextualKey: contextualKey.trim() });
-    if (keyExists) {
-      throw new AppError(400, `Integration with this contextual key already exists for role ${role}`);
-    }
-  }
+  // Ensure only one integration exists per role: delete all others except the one being updated
+  const deleteResult = await IntegrationModel.deleteMany({ _id: { $ne: req.params.id } });
+  console.log(`[Integration API] Deleted ${deleteResult.deletedCount} other integration(s) for role ${role} (keeping ID: ${req.params.id})`);
   
+  // Update the integration
   const updated = await IntegrationModel.findByIdAndUpdate(
     req.params.id,
     {
