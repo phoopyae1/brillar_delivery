@@ -140,6 +140,11 @@ export const senderAgentApi = {
     apiFetch('/agent/deliveries/list', { method: 'POST', body: JSON.stringify({ senderId }) }, token)
 };
 
+export const publicAgentApi = {
+  createDelivery: (data: any) =>
+    apiFetch('/public/agent/deliveries', { method: 'POST', body: JSON.stringify(data) })
+};
+
 export const priceCalculatorApi = {
   calculate: (data: { origin: string; destination: string; weight: number; serviceType: 'express' | 'standard' }) =>
     apiFetch('/public/agent/price-calculator', { method: 'POST', body: JSON.stringify(data) })

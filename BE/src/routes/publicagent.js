@@ -523,6 +523,31 @@ router.post('/public/agent/deliveries', validateBody(createDeliverySchema), asyn
       throw new AppError(400, 'Sender email is required');
     }
     
+    // Build full sender address from components if provided (must be done before description building)
+    let senderAddress = req.body.senderAddress || null;
+    if (senderAddress && senderAddress.trim() !== '') {
+      // Append postal code and country if not already included
+      if (req.body.senderPostalCode && !senderAddress.includes(req.body.senderPostalCode)) {
+        senderAddress = `${senderAddress}, ${req.body.senderPostalCode}`;
+      }
+      if (req.body.originCountry && !senderAddress.includes(req.body.originCountry)) {
+        senderAddress = `${senderAddress}, ${req.body.originCountry}`;
+      }
+    } else if (req.body.senderPostalCode || req.body.originCountry) {
+      // Build from components if senderAddress is not provided but components are
+      const addressParts = [];
+      if (req.body.senderAddress && req.body.senderAddress.trim() !== '') {
+        addressParts.push(req.body.senderAddress.trim());
+      }
+      if (req.body.senderPostalCode && req.body.senderPostalCode.trim() !== '') {
+        addressParts.push(req.body.senderPostalCode.trim());
+      }
+      if (req.body.originCountry && req.body.originCountry.trim() !== '') {
+        addressParts.push(req.body.originCountry.trim());
+      }
+      senderAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
+    }
+    
     // Build title and description from form data if not provided
     let title = req.body.title;
     let description = req.body.description;
@@ -559,8 +584,10 @@ router.post('/public/agent/deliveries', validateBody(createDeliverySchema), asyn
       if (req.body.deliveryDays) descriptionParts.push(`Estimated Delivery: ${req.body.deliveryDays} day(s)`);
       
       // Sender info
-      if (req.body.senderAddress) {
-        descriptionParts.push(`Sender Address: ${req.body.senderAddress}`);
+      if (senderAddress) {
+        descriptionParts.push(`Sender Address: ${senderAddress}`);
+      } else {
+        if (req.body.senderAddress) descriptionParts.push(`Sender Address: ${req.body.senderAddress}`);
         if (req.body.senderPostalCode) descriptionParts.push(`Sender Postal: ${req.body.senderPostalCode}`);
       }
       
@@ -658,7 +685,10 @@ router.post('/public/agent/deliveries', validateBody(createDeliverySchema), asyn
     res.status(201).json({
       success: true,
       message: 'Delivery created successfully',
-      data: deliveryWithDetails
+      data: {
+        ...deliveryWithDetails,
+        senderAddress: senderAddress || null
+      }
     });
   } catch (error) {
     console.error('[Public Agent API] Error creating delivery:', error);
