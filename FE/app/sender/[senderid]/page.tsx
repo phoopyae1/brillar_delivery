@@ -796,223 +796,162 @@ export default function SenderDashboardById() {
                 </Typography>
               </Alert>
 
-              {/* Delivery Receipt/Paper */}
-              <Card sx={{ mb: 3, bgcolor: '#ffffff', border: '3px solid #1976d2', borderRadius: 3, boxShadow: 6 }}>
-                <CardContent sx={{ p: 4 }}>
+              {/* Delivery Receipt - Simple Design */}
+              <Card 
+                sx={{ 
+                  mb: 3, 
+                  bgcolor: '#ffffff !important', 
+                  border: '1px solid #e0e0e0', 
+                  borderRadius: 1,
+                  cursor: 'default',
+                  '&:hover': {
+                    bgcolor: '#ffffff !important',
+                    borderColor: '#e0e0e0 !important',
+                    boxShadow: 'none !important',
+                    transform: 'none !important',
+                    transition: 'none !important'
+                  }
+                }}
+              >
+                <CardContent sx={{ p: 3, '&:hover': { bgcolor: 'transparent' } }}>
                   {/* Header */}
-                  <Box sx={{ 
-                    textAlign: 'center', 
-                    mb: 4, 
-                    borderBottom: '3px solid #1976d2', 
-                    pb: 3,
-                    bgcolor: '#e3f2fd',
-                    borderRadius: 2,
-                    p: 3
-                  }}>
-                    <Typography variant="h3" sx={{ fontWeight: 800, color: '#1976d2', mb: 2, fontSize: { xs: '1.75rem', md: '2.5rem' } }}>
-                      DELIVERY RECEIPT
+                  <Box sx={{ textAlign: 'center', mb: 3, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+                    <Typography 
+                      variant="h5" 
+                      component="div"
+                      sx={{ 
+                        fontWeight: 600, 
+                        color: '#1a1a1a !important', 
+                        mb: 1,
+                        '&:hover': { color: '#1a1a1a !important' }
+                      }}
+                    >
+                      Delivery Receipt
                     </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a1a1a', letterSpacing: 1.5, fontSize: { xs: '1rem', md: '1.5rem' } }}>
-                      TRACKING CODE: <span style={{ color: '#1976d2' }}>{trackingCode}</span>
+                    <Typography 
+                      variant="h6" 
+                      component="div"
+                      sx={{ 
+                        fontWeight: 500, 
+                        color: '#1976d2 !important',
+                        '&:hover': { color: '#1976d2 !important' }
+                      }}
+                    >
+                      Tracking Code: {trackingCode}
                     </Typography>
                   </Box>
 
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
                     {/* Sender Information */}
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ 
-                        p: 3, 
-                        bgcolor: '#f8f9fa', 
-                        borderRadius: 2,
-                        border: '2px solid #90caf9',
-                        minHeight: '100%'
-                      }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1976d2', fontSize: '1.1rem', textTransform: 'uppercase' }}>
-                          FROM (SENDER)
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Name:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.senderName}</span>
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Email:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.senderEmail}</span>
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Phone:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.senderPhone}</span>
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Address:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.senderAddress}</span>
-                          </Typography>
-                          {formData.senderPostalCode && (
-                            <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                              <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Postal Code:</strong> 
-                              <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.senderPostalCode}</span>
-                            </Typography>
-                          )}
-                          {formData.originCountry && (
-                            <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                              <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Country:</strong> 
-                              <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{COUNTRIES.find(c => c.code === formData.originCountry)?.name}</span>
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
+                      <Typography 
+                        variant="subtitle2" 
+                        component="div"
+                        sx={{ 
+                          fontWeight: 600, 
+                          mb: 1, 
+                          color: '#1a1a1a !important',
+                          '&:hover': { color: '#1a1a1a !important' }
+                        }}
+                      >
+                        From (Sender)
+                      </Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Name: {formData.senderName}</Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Email: {formData.senderEmail}</Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Phone: {formData.senderPhone}</Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Address: {formData.senderAddress}</Typography>
+                      {formData.senderPostalCode && (
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Postal Code: {formData.senderPostalCode}</Typography>
+                      )}
+                      {formData.originCountry && (
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Country: {COUNTRIES.find(c => c.code === formData.originCountry)?.name}</Typography>
+                      )}
                     </Grid>
 
                     {/* Recipient Information */}
                     <Grid item xs={12} md={6}>
-                      <Box sx={{ 
-                        p: 3, 
-                        bgcolor: '#f8f9fa', 
-                        borderRadius: 2,
-                        border: '2px solid #90caf9',
-                        minHeight: '100%'
-                      }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1976d2', fontSize: '1.1rem', textTransform: 'uppercase' }}>
-                          TO (RECIPIENT)
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Name:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.recipientName}</span>
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Phone:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.recipientPhone}</span>
-                          </Typography>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Address:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.recipientAddress}</span>
-                          </Typography>
-                          {formData.recipientPostalCode && (
-                            <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                              <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Postal Code:</strong> 
-                              <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{formData.recipientPostalCode}</span>
-                            </Typography>
-                          )}
-                          {formData.destinationCountry && (
-                            <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                              <strong style={{ color: '#495057', minWidth: '100px', display: 'inline-block' }}>Country:</strong> 
-                              <span style={{ color: '#1a1a1a', fontWeight: 500 }}>{COUNTRIES.find(c => c.code === formData.destinationCountry)?.name}</span>
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
+                      <Typography 
+                        variant="subtitle2" 
+                        component="div"
+                        sx={{ 
+                          fontWeight: 600, 
+                          mb: 1, 
+                          color: '#1a1a1a !important',
+                          '&:hover': { color: '#1a1a1a !important' }
+                        }}
+                      >
+                        To (Recipient)
+                      </Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Name: {formData.recipientName}</Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Phone: {formData.recipientPhone}</Typography>
+                      <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Address: {formData.recipientAddress}</Typography>
+                      {formData.recipientPostalCode && (
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', mb: 0.5, '&:hover': { color: '#212529 !important' } }}>Postal Code: {formData.recipientPostalCode}</Typography>
+                      )}
+                      {formData.destinationCountry && (
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Country: {COUNTRIES.find(c => c.code === formData.destinationCountry)?.name}</Typography>
+                      )}
                     </Grid>
                   </Grid>
 
                   {/* Shipment Details */}
-                  <Box sx={{ 
-                    p: 3, 
-                    bgcolor: '#f8f9fa', 
-                    borderRadius: 2, 
-                    mb: 3,
-                    border: '2px solid #90caf9'
-                  }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2.5, color: '#1976d2', fontSize: '1.1rem', textTransform: 'uppercase' }}>
-                      SHIPMENT DETAILS
+                  <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid #e0e0e0' }}>
+                    <Typography 
+                      variant="subtitle2" 
+                      component="div"
+                      sx={{ 
+                        fontWeight: 600, 
+                        mb: 1, 
+                        color: '#1a1a1a !important',
+                        '&:hover': { color: '#1a1a1a !important' }
+                      }}
+                    >
+                      Shipment Details
                     </Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6} md={4}>
-                        <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                          <strong style={{ color: '#495057' }}>Type:</strong> 
-                          <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>
-                            {formData.shipmentType === 'documents' ? 'Documents' : 'Packages'}
-                          </span>
-                        </Typography>
+                    <Grid container spacing={1}>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Type: {formData.shipmentType === 'documents' ? 'Documents' : 'Packages'}</Typography>
                       </Grid>
                       {formData.shipmentType === 'documents' && formData.documentType && (
-                        <Grid item xs={12} sm={6} md={4}>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057' }}>Document Type:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>{formData.documentType}</span>
-                          </Typography>
+                        <Grid item xs={6} sm={4}>
+                          <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Document Type: {formData.documentType}</Typography>
                         </Grid>
                       )}
                       {formData.shipmentType === 'packages' && formData.packageSize && (
-                        <Grid item xs={12} sm={6} md={4}>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057' }}>Package Size:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>{formData.packageSize}</span>
-                          </Typography>
+                        <Grid item xs={6} sm={4}>
+                          <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Package Size: {formData.packageSize}</Typography>
                         </Grid>
                       )}
-                      <Grid item xs={12} sm={6} md={4}>
-                        <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                          <strong style={{ color: '#495057' }}>Quantity:</strong> 
-                          <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>{formData.quantity}</span>
-                        </Typography>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Quantity: {formData.quantity}</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={4}>
-                        <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                          <strong style={{ color: '#495057' }}>Weight:</strong> 
-                          <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>{formData.weight} kg</span>
-                        </Typography>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Weight: {formData.weight} kg</Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={4}>
-                        <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                          <strong style={{ color: '#495057' }}>Service:</strong> 
-                          <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>
-                            {formData.serviceType === 'express' ? 'Express' : 'Standard'}
-                          </span>
-                        </Typography>
+                      <Grid item xs={6} sm={4}>
+                        <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Service: {formData.serviceType === 'express' ? 'Express' : 'Standard'}</Typography>
                       </Grid>
                       {deliveryDays && (
-                        <Grid item xs={12} sm={6} md={4}>
-                          <Typography variant="body1" sx={{ color: '#212529', fontSize: '0.95rem' }}>
-                            <strong style={{ color: '#495057' }}>Est. Delivery:</strong> 
-                            <span style={{ color: '#1a1a1a', fontWeight: 500, marginLeft: '8px' }}>{deliveryDays} day(s)</span>
-                          </Typography>
+                        <Grid item xs={6} sm={4}>
+                          <Typography variant="body2" component="div" sx={{ color: '#212529 !important', '&:hover': { color: '#212529 !important' } }}>Est. Delivery: {deliveryDays} day(s)</Typography>
                         </Grid>
                       )}
                     </Grid>
                   </Box>
 
                   {/* QR Code and Price */}
-                  <Grid container spacing={3} sx={{ mb: 3 }}>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
                     <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                       {qrCodeUrl && (
-                        <Box 
-                          component="div"
-                          sx={{ 
-                            p: 3, 
-                            bgcolor: '#ffffff !important', 
-                            borderRadius: 2, 
-                            border: '3px solid #1976d2 !important',
-                            boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                            cursor: 'default',
-                            '&:hover': {
-                              bgcolor: '#ffffff !important',
-                              borderColor: '#1976d2 !important',
-                              boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                              transform: 'none !important',
-                              transition: 'none !important'
-                            },
-                            '&:active': {
-                              bgcolor: '#ffffff !important',
-                              borderColor: '#1976d2 !important',
-                              boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                              transform: 'none !important'
-                            }
-                          }}
-                        >
+                        <Box sx={{ textAlign: 'center' }}>
                           <Typography 
+                            variant="body2" 
                             component="div"
                             sx={{ 
-                              display: 'block', 
-                              textAlign: 'center', 
-                              mb: 2, 
-                              fontWeight: 700,
-                              color: '#1976d2 !important',
-                              fontSize: '1rem',
-                              cursor: 'default',
-                              '&:hover': {
-                                color: '#1976d2 !important'
-                              }
+                              mb: 1, 
+                              color: '#212529 !important', 
+                              fontWeight: 500,
+                              '&:hover': { color: '#212529 !important' }
                             }}
                           >
                             Scan to Track
@@ -1022,72 +961,39 @@ export default function SenderDashboardById() {
                             alt="QR Code" 
                             draggable={false}
                             style={{ 
-                              width: 200, 
-                              height: 200, 
+                              width: 150, 
+                              height: 150, 
                               display: 'block',
                               margin: '0 auto',
                               pointerEvents: 'none',
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none'
+                              userSelect: 'none'
                             }} 
                           />
                         </Box>
                       )}
                     </Grid>
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                       {calculatedPrice && (
-                        <Box 
-                          component="div"
-                          sx={{ 
-                            textAlign: 'center', 
-                            p: 4, 
-                            bgcolor: '#e3f2fd !important', 
-                            borderRadius: 2, 
-                            border: '3px solid #1976d2 !important',
-                            boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                            cursor: 'default',
-                            '&:hover': {
-                              bgcolor: '#e3f2fd !important',
-                              borderColor: '#1976d2 !important',
-                              boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                              transform: 'none !important',
-                              transition: 'none !important'
-                            },
-                            '&:active': {
-                              bgcolor: '#e3f2fd !important',
-                              borderColor: '#1976d2 !important',
-                              boxShadow: '2px 2px 8px rgba(0,0,0,0.1) !important',
-                              transform: 'none !important'
-                            }
-                          }}
-                        >
+                        <Box sx={{ textAlign: 'center' }}>
                           <Typography 
+                            variant="body2" 
                             component="div"
                             sx={{ 
-                              display: 'block', 
-                              mb: 2,
-                              color: '#495057 !important',
-                              fontWeight: 600,
-                              textTransform: 'uppercase',
-                              letterSpacing: 1,
-                              cursor: 'default',
-                              '&:hover': {
-                                color: '#495057 !important'
-                              }
+                              mb: 1, 
+                              color: '#212529 !important', 
+                              fontWeight: 500,
+                              '&:hover': { color: '#212529 !important' }
                             }}
                           >
                             Total Amount
                           </Typography>
                           <Typography 
+                            variant="h5" 
                             component="div"
                             sx={{ 
-                              fontWeight: 800, 
+                              fontWeight: 600, 
                               color: '#1976d2 !important',
-                              fontSize: { xs: '2rem', md: '2.5rem' },
-                              cursor: 'default',
-                              '&:hover': {
-                                color: '#1976d2 !important'
-                              }
+                              '&:hover': { color: '#1976d2 !important' }
                             }}
                           >
                             ${calculatedPrice.toFixed(2)} USD
@@ -1116,17 +1022,7 @@ export default function SenderDashboardById() {
                             setError('Failed to download PDF. Please try again later.');
                           }
                         }}
-                        sx={{ 
-                          minWidth: 180,
-                          '&:hover': {
-                            backgroundColor: 'secondary.main',
-                            opacity: 1
-                          },
-                          '&:active': {
-                            backgroundColor: 'secondary.main',
-                            opacity: 1
-                          }
-                        }}
+                        sx={{ minWidth: 180 }}
                       >
                         Download Receipt PDF
                       </Button>
@@ -1137,17 +1033,7 @@ export default function SenderDashboardById() {
                       disableRipple
                       disableElevation
                       onClick={() => router.push(`/track/${trackingCode}`)}
-                      sx={{ 
-                        minWidth: 180,
-                        '&:hover': {
-                          backgroundColor: 'transparent',
-                          borderColor: 'primary.main'
-                        },
-                        '&:active': {
-                          backgroundColor: 'transparent',
-                          borderColor: 'primary.main'
-                        }
-                      }}
+                      sx={{ minWidth: 180 }}
                     >
                       Track Shipment
                     </Button>
@@ -1156,15 +1042,14 @@ export default function SenderDashboardById() {
                       disableRipple
                       disableElevation
                       onClick={() => {
-                        setActiveTab(1); // Switch to deliveries tab
-                        setActiveStep(0); // Reset form
+                        setActiveTab(1);
+                        setActiveStep(0);
                         setTrackingCode(null);
                         setQrCodeUrl(null);
                         setDeliveryId(null);
                         setPdfUrl(null);
                         setCalculatedPrice(null);
                         setDeliveryDays(null);
-                        // Reset form data
                         setFormData({
                           senderName: user?.name || '',
                           senderEmail: user?.email || '',
@@ -1189,17 +1074,7 @@ export default function SenderDashboardById() {
                           preferredTime: ''
                         });
                       }}
-                      sx={{ 
-                        minWidth: 180,
-                        '&:hover': {
-                          backgroundColor: 'primary.main',
-                          opacity: 1
-                        },
-                        '&:active': {
-                          backgroundColor: 'primary.main',
-                          opacity: 1
-                        }
-                      }}
+                      sx={{ minWidth: 180 }}
                     >
                       View My Deliveries
                     </Button>
