@@ -12,7 +12,9 @@ import {
   MenuItem,
   Card,
   CardContent,
-  Divider
+  Divider,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   LocalShipping,
@@ -23,6 +25,7 @@ import {
   Schedule,
   CheckCircle
 } from '@mui/icons-material';
+import { priceCalculatorApi } from '../lib/api';
 
 // Available countries for international shipping
 const COUNTRIES = [
@@ -69,23 +72,63 @@ export default function PriceCalculatorPage() {
   const [calculated, setCalculated] = useState(false);
   const [price, setPrice] = useState(0);
   const [deliveryDays, setDeliveryDays] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const calculatePrice = () => {
+  const calculatePrice = async () => {
     if (!origin || !destination || !weight) {
       return;
     }
 
-    const routeKey = `${origin}-${destination}`;
-    const routePricing = PRICING[routeKey as keyof typeof PRICING] || PRICING.default;
-    const routeDelivery = DELIVERY_TIMES[routeKey as keyof typeof DELIVERY_TIMES] || DELIVERY_TIMES.default;
+    // Validate that origin and destination are different
+    if (origin === destination) {
+      setError('Origin and destination cannot be the same');
+      return;
+    }
 
-    const weightNum = parseFloat(weight) || 0;
-    const basePrice = serviceType === 'express' ? routePricing.express : routePricing.standard;
-    const totalPrice = basePrice + (routePricing.perKg * Math.max(0, weightNum - 1)); // First kg included
+    setLoading(true);
+    setError(null);
+    setCalculated(false);
 
-    setPrice(totalPrice);
-    setDeliveryDays(serviceType === 'express' ? routeDelivery.express : routeDelivery.standard);
-    setCalculated(true);
+    try {
+      const weightNum = parseFloat(weight);
+      if (isNaN(weightNum) || weightNum <= 0) {
+        throw new Error('Weight must be a positive number');
+      }
+
+      const response = await priceCalculatorApi.calculate({
+        origin,
+        destination,
+        weight: weightNum,
+        serviceType
+      });
+
+      if (response.success && response.data) {
+        setPrice(response.data.price);
+        setDeliveryDays(response.data.deliveryDays);
+        setCalculated(true);
+      } else {
+        throw new Error('Failed to calculate price');
+      }
+    } catch (err: any) {
+      console.error('Price calculation error:', err);
+      let errorMessage = 'Failed to calculate price. Please check your route selection.';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
+      setCalculated(false);
+      setPrice(0);
+      setDeliveryDays(0);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCalculate = () => {
@@ -102,6 +145,7 @@ export default function PriceCalculatorPage() {
     setCalculated(false);
     setPrice(0);
     setDeliveryDays(0);
+    setError(null);
   };
 
   const isSameCountry = origin && destination && origin === destination;
@@ -303,6 +347,12 @@ export default function PriceCalculatorPage() {
                   </Box>
                 )}
 
+                {error && (
+                  <Alert severity="error" sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', border: '1px solid rgba(211, 47, 47, 0.3)' }}>
+                    {error}
+                  </Alert>
+                )}
+
                 {/* Weight */}
                 <Box>
                   <Typography variant="subtitle2" sx={{ mb: 1.5, color: 'text.secondary', fontWeight: 600 }}>
@@ -399,10 +449,10 @@ export default function PriceCalculatorPage() {
                   <Button
                     variant="contained"
                     onClick={handleCalculate}
-                    disabled={!origin || !destination || !weight || isSameCountry}
+                    disabled={!origin || !destination || !weight || isSameCountry || loading}
                     fullWidth
                     size="large"
-                    startIcon={<Calculate />}
+                    startIcon={loading ? <CircularProgress size={20} sx={{ color: '#000' }} /> : <Calculate />}
                     sx={{
                       py: 1.5,
                       fontSize: '1rem',
@@ -423,7 +473,7 @@ export default function PriceCalculatorPage() {
                       }
                     }}
                   >
-                    Calculate Price
+                    {loading ? 'Calculating...' : 'Calculate Price'}
                   </Button>
                   {calculated && (
                     <Button

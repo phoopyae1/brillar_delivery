@@ -439,7 +439,24 @@ router.post('/public/agent/price-calculator', validateBody(priceCalculatorSchema
   // Calculate price
   const weightNum = typeof weight === 'string' ? parseFloat(weight) : weight;
   const basePrice = serviceType === 'express' ? routePricing.express : routePricing.standard;
-  const totalPrice = basePrice + (routePricing.perKg * Math.max(0, weightNum - 1)); // First kg included
+  const additionalWeight = Math.max(0, weightNum - 1); // First kg included
+  const additionalWeightCost = routePricing.perKg * additionalWeight;
+  const totalPrice = basePrice + additionalWeightCost;
+  
+  // Debug logging
+  console.log('[Price Calculator]', {
+    routeKey,
+    origin,
+    destination,
+    weight: weightNum,
+    serviceType,
+    basePrice,
+    perKg: routePricing.perKg,
+    additionalWeight,
+    additionalWeightCost,
+    totalPrice,
+    roundedPrice: parseFloat(totalPrice.toFixed(2))
+  });
   
   // Get delivery days
   const deliveryDays = serviceType === 'express' ? routeDelivery.express : routeDelivery.standard;
@@ -458,8 +475,8 @@ router.post('/public/agent/price-calculator', validateBody(priceCalculatorSchema
       breakdown: {
         basePrice: serviceType === 'express' ? routePricing.express : routePricing.standard,
         perKgPrice: routePricing.perKg,
-        additionalWeight: Math.max(0, weightNum - 1),
-        additionalWeightCost: parseFloat((routePricing.perKg * Math.max(0, weightNum - 1)).toFixed(2))
+        additionalWeight: additionalWeight,
+        additionalWeightCost: parseFloat(additionalWeightCost.toFixed(2))
       }
     }
   });
